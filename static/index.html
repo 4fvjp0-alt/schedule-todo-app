@@ -244,6 +244,7 @@ textarea{resize:vertical;min-height:65px;}
   <div class="header-right">
     <span class="user-badge" id="header-username"></span>
     <button class="icon-btn" id="dark-toggle" onclick="toggleDark()" title="다크모드">🌙</button>
+    <button class="icon-btn" onclick="openPwModal()" title="비밀번호 변경">🔑</button>
     <button class="icon-btn" onclick="doLogout()">로그아웃</button>
   </div>
 </header>
@@ -320,6 +321,21 @@ textarea{resize:vertical;min-height:65px;}
     </div>
     <div class="form-group"><label>태그</label><div class="tag-selector" id="todo-tag-selector"></div></div>
     <button class="btn-submit" onclick="saveTodo()">저장</button>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔑 비밀번호 변경</span>
+      <button class="modal-close" onclick="closePwModal()">✕</button>
+    </div>
+    <div id="pw-error" style="color:#ef4444;font-size:.8rem;margin-bottom:8px;min-height:18px;"></div>
+    <div class="form-group"><label>현재 비밀번호</label><input type="password" id="pw-current" placeholder="현재 비밀번호"></div>
+    <div class="form-group"><label>새 비밀번호</label><input type="password" id="pw-new" placeholder="새 비밀번호 (4자 이상)"></div>
+    <div class="form-group"><label>새 비밀번호 확인</label><input type="password" id="pw-confirm" placeholder="새 비밀번호 다시 입력"></div>
+    <button class="btn-submit" onclick="changePassword()">변경하기</button>
   </div>
 </div>
 
@@ -813,6 +829,31 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click
 document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('reg-password').addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
 document.getElementById('todo-title').addEventListener('keydown',e=>{if(e.key==='Enter')saveTodo();});
+
+// ── Password change ───────────────────────────────────────────────────────────
+function openPwModal(){
+  document.getElementById('pw-current').value='';
+  document.getElementById('pw-new').value='';
+  document.getElementById('pw-confirm').value='';
+  document.getElementById('pw-error').textContent='';
+  document.getElementById('pw-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('pw-current').focus(),300);
+}
+function closePwModal(){ document.getElementById('pw-modal').classList.remove('open'); }
+async function changePassword(){
+  const current=document.getElementById('pw-current').value;
+  const newPw=document.getElementById('pw-new').value;
+  const confirm=document.getElementById('pw-confirm').value;
+  const errEl=document.getElementById('pw-error');
+  if(newPw!==confirm){errEl.textContent='새 비밀번호가 일치하지 않습니다';return;}
+  const r=await fetch('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({current_password:current,new_password:newPw})});
+  const d=await r.json();
+  if(!r.ok){errEl.textContent=d.error;return;}
+  closePwModal();
+  alert('비밀번호가 변경되었습니다.');
+}
+document.getElementById('pw-confirm').addEventListener('keydown',e=>{if(e.key==='Enter')changePassword();});
 
 checkSession();
 </script>

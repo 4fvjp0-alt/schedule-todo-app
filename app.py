@@ -191,6 +191,24 @@ def me():
         return jsonify(None)
     return jsonify({'id': session['user_id'], 'username': session['username']})
 
+@app.route('/api/change-password', methods=['POST'])
+@login_required
+def change_password():
+    d = request.json
+    current = d.get('current_password') or ''
+    new_pw  = d.get('new_password') or ''
+    if not current or not new_pw:
+        return jsonify({'error': '현재 비밀번호와 새 비밀번호를 입력하세요'}), 400
+    if len(new_pw) < 4:
+        return jsonify({'error': '새 비밀번호는 4자 이상이어야 합니다'}), 400
+    user, _ = query('SELECT * FROM users WHERE id=?', (current_user_id(),), fetchone=True)
+    if not user or not check_password_hash(user['password_hash'], current):
+        return jsonify({'error': '현재 비밀번호가 틀렸습니다'}), 401
+    query('UPDATE users SET password_hash=? WHERE id=?',
+          (generate_password_hash(new_pw), current_user_id()), commit=True)
+    return jsonify({'ok': True})
+
+
 @app.route('/api/users')
 def get_users():
     rows, _ = query('SELECT id, username FROM users ORDER BY username', fetchall=True)
