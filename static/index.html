@@ -715,7 +715,13 @@ function renderCalendar() {
   events.forEach(e => {
     const d = e.start_datetime.split('T')[0];
     if (!eventMap[d]) eventMap[d] = [];
-    eventMap[d].push(e);
+    eventMap[d].push({type:'event', data:e});
+  });
+  // Add todos with due_date
+  todos.forEach(t => {
+    if (!t.due_date) return;
+    if (!eventMap[t.due_date]) eventMap[t.due_date] = [];
+    eventMap[t.due_date].push({type:'todo', data:t});
   });
 
   let html = '';
@@ -734,9 +740,11 @@ function renderCalendar() {
       const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dayCount).padStart(2,'0')}`;
       const isToday = dateStr === todayStr;
       const isSel = dateStr === selectedDay;
-      const dayEvents = eventMap[dateStr] || [];
-      const dots = dayEvents.slice(0,4).map(e =>
-        `<div class="cal-dot" style="background:${e.color}"></div>`
+      const dayItems = eventMap[dateStr] || [];
+      const dots = dayItems.slice(0,4).map(item =>
+        item.type === 'event'
+          ? `<div class="cal-dot" style="background:${item.data.color}"></div>`
+          : `<div class="cal-dot" style="background:#94a3b8;border:1px solid #64748b"></div>`
       ).join('');
       html += `
         <div class="cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="selectCalDay('${dateStr}')">
@@ -760,16 +768,18 @@ function renderSelectedDay() {
   if (!selectedDay) return;
   const [y, m, d] = selectedDay.split('-');
   document.getElementById('selected-day-title').textContent =
-    `${y}년 ${m}월 ${d}일 일정`;
+    `${y}년 ${m}월 ${d}일`;
 
   const dayEvents = events.filter(e => e.start_datetime.startsWith(selectedDay));
+  const dayTodos = todos.filter(t => t.due_date === selectedDay);
   const el = document.getElementById('selected-events');
 
-  if (!dayEvents.length) {
-    el.innerHTML = '<div class="no-items" style="padding:20px">이 날의 일정이 없습니다</div>';
+  if (!dayEvents.length && !dayTodos.length) {
+    el.innerHTML = '<div class="no-items" style="padding:20px">이 날의 일정/할일이 없습니다</div>';
     return;
   }
-  el.innerHTML = dayEvents.map(e => `
+
+  const eventHtml = dayEvents.map(e => `
     <div class="card">
       <div class="event-item">
         <div class="event-color-bar" style="background:${e.color}"></div>
@@ -785,6 +795,31 @@ function renderSelectedDay() {
       </div>
     </div>
   `).join('');
+
+  const todoHtml = dayTodos.map(t => `
+    <div class="card">
+      <div class="todo-item">
+        <div class="todo-check ${t.completed ? 'done' : ''}" onclick="toggleTodo(${t.id})"></div>
+        <div class="todo-content">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:2px;">✅ 할일</div>
+          <div class="todo-title ${t.completed ? 'done' : ''}">${esc(t.title)}</div>
+          ${t.description ? `<div class="todo-desc">${esc(t.description)}</div>` : ''}
+          <div class="todo-meta">
+            <span class="badge badge-${t.priority}">${
+              t.priority === 'high' ? '🔴 높음' :
+              t.priority === 'medium' ? '🟡 보통' : '🟢 낮음'
+            }</span>
+          </div>
+        </div>
+        <div class="todo-actions">
+          <button class="btn-icon btn-edit" onclick="editTodo(${t.id})">✏️</button>
+          <button class="btn-icon btn-delete" onclick="deleteTodo(${t.id})">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  el.innerHTML = eventHtml + todoHtml;
 }
 
 function formatDatetime(dt) {
