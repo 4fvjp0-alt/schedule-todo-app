@@ -220,8 +220,11 @@ def delete_event(event_id):
     return '', 204
 
 
+# gunicorn/직접실행 모두 앱 로드 시 테이블 생성
+init_db()
+
+
 if __name__ == '__main__':
-    init_db()
     mode = 'PostgreSQL (클라우드)' if DATABASE_URL else 'SQLite (로컬)'
     print(f'\n{"="*50}')
     print(f'  일정/할일 관리 앱  |  DB: {mode}')
