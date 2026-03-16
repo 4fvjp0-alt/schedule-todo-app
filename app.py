@@ -65,8 +65,10 @@ def insert(sql, params=()):
 
 def init_db():
     conn, driver = get_db()
-    cur = conn.cursor()
     if driver == 'pg':
+        # autocommit 모드: 각 DDL이 독립 트랜잭션 → rollback 오염 없음
+        conn.autocommit = True
+        cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
@@ -88,15 +90,16 @@ def init_db():
             item_type TEXT NOT NULL, item_id INTEGER NOT NULL,
             content TEXT NOT NULL,
             created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
-        # Migrations for existing tables
+        # 기존 테이블 마이그레이션 (컬럼 없을 때만 추가)
         for tbl in ('todos', 'events'):
-            for col in (f"ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
-                        f"ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT ''"):
+            for col in ("ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
+                        "ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT ''"):
                 try:
                     cur.execute(f'ALTER TABLE {tbl} {col}')
                 except Exception:
-                    conn.rollback()
+                    pass  # 이미 존재하면 무시
     else:
+        cur = conn.cursor()
         cur.executescript('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
