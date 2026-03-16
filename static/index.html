@@ -15,424 +15,263 @@
     --border: #e2e8f0;
     --success: #22c55e;
     --danger: #ef4444;
-    --warning: #f59e0b;
     --radius: 12px;
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Auth screen ── */
+  #auth-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #4f8ef7, #2563eb);
+    display: flex; align-items: center; justify-content: center; z-index: 999; padding: 20px;
   }
-  /* Header */
+  #auth-screen.hidden { display: none; }
+  .auth-box {
+    background: white; border-radius: 20px; padding: 32px 28px; width: 100%; max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .auth-logo { text-align: center; font-size: 2.5rem; margin-bottom: 8px; }
+  .auth-title { text-align: center; font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+  .auth-sub { text-align: center; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 24px; }
+  .auth-tabs { display: flex; background: #f1f5f9; border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+  .auth-tab {
+    flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px;
+    font-size: 0.88rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+  }
+  .auth-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .auth-form { display: none; }
+  .auth-form.active { display: block; }
+  .auth-input {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 0.92rem; color: var(--text); outline: none; margin-bottom: 10px; transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .auth-input:focus { border-color: var(--primary); }
+  .auth-btn {
+    width: 100%; padding: 13px; background: var(--primary); color: white; border: none;
+    border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 4px;
+    transition: background 0.2s;
+  }
+  .auth-btn:hover { background: var(--primary-dark); }
+  .auth-error { color: var(--danger); font-size: 0.8rem; margin-bottom: 8px; min-height: 18px; }
+
+  /* ── Header ── */
   header {
-    background: var(--primary);
-    color: white;
-    padding: 16px 20px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(79,142,247,0.3);
+    background: var(--primary); color: white; padding: 12px 16px;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(79,142,247,0.3);
+    display: flex; align-items: center; justify-content: space-between;
   }
-  header h1 { font-size: 1.2rem; font-weight: 700; }
-  header p { font-size: 0.75rem; opacity: 0.85; margin-top: 2px; }
-
-  /* Tabs */
-  .tabs {
-    display: flex;
-    background: white;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 62px;
-    z-index: 99;
+  .header-left h1 { font-size: 1.1rem; font-weight: 700; }
+  .header-left p { font-size: 0.7rem; opacity: 0.85; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .user-badge {
+    background: rgba(255,255,255,0.2); border-radius: 20px; padding: 4px 12px;
+    font-size: 0.8rem; font-weight: 600;
   }
-  .tab-btn {
-    flex: 1;
-    padding: 14px 8px;
-    border: none;
-    background: transparent;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-  }
-  .tab-btn.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
+  .logout-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: white; border-radius: 8px; padding: 5px 10px; font-size: 0.75rem; cursor: pointer;
   }
 
-  /* Main */
-  main { padding: 16px; max-width: 800px; margin: 0 auto; }
+  /* ── Tabs ── */
+  .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); position: sticky; top: 56px; z-index: 99; }
+  .tab-btn { flex: 1; padding: 13px 8px; border: none; background: transparent; font-size: 0.88rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-  /* Tab panels */
+  /* ── User filter ── */
+  .user-filter-bar {
+    display: flex; gap: 6px; padding: 10px 16px 4px; overflow-x: auto;
+    background: white; border-bottom: 1px solid var(--border);
+  }
+  .user-filter-btn {
+    padding: 5px 12px; border: 1.5px solid var(--border); background: white;
+    border-radius: 20px; font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .user-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  main { padding: 14px; max-width: 800px; margin: 0 auto; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Add button */
+  /* ── Add button ── */
   .add-btn {
-    width: 100%;
-    padding: 14px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    box-shadow: var(--shadow);
-    transition: background 0.2s;
+    width: 100%; padding: 13px; background: var(--primary); color: white; border: none;
+    border-radius: var(--radius); font-size: 0.93rem; font-weight: 600; cursor: pointer;
+    margin-bottom: 12px; display: flex; align-items: center; justify-content: center;
+    gap: 6px; box-shadow: var(--shadow); transition: background 0.2s;
   }
   .add-btn:hover { background: var(--primary-dark); }
 
-  /* Card */
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 10px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    transition: transform 0.15s;
-  }
-  .card:active { transform: scale(0.99); }
+  /* ── Card ── */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 8px; overflow: hidden; border: 1px solid var(--border); }
 
-  /* Todo item */
-  .todo-item {
-    display: flex;
-    align-items: flex-start;
-    padding: 14px 16px;
-    gap: 12px;
+  /* ── Owner badge ── */
+  .owner-badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 2px 7px;
+    border-radius: 10px; background: #ede9fe; color: #7c3aed; margin-bottom: 3px;
   }
-  .todo-check {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .todo-check.done {
-    background: var(--success);
-    border-color: var(--success);
-    color: white;
-  }
+  .owner-badge.mine { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── Todo ── */
+  .todo-item { display: flex; align-items: flex-start; padding: 13px 14px; gap: 10px; }
+  .todo-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .todo-check.done { background: var(--success); border-color: var(--success); color: white; }
   .todo-check.done::after { content: '✓'; font-size: 13px; font-weight: bold; }
+  .todo-check.readonly { cursor: default; }
   .todo-content { flex: 1; min-width: 0; }
-  .todo-title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    word-break: break-word;
-  }
+  .todo-title { font-weight: 600; font-size: 0.93rem; word-break: break-word; }
   .todo-title.done { text-decoration: line-through; color: var(--text-muted); }
-  .todo-desc {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-top: 3px;
-    word-break: break-word;
-  }
-  .todo-meta {
-    display: flex;
-    gap: 8px;
-    margin-top: 6px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .badge {
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-weight: 600;
-  }
+  .todo-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; word-break: break-word; }
+  .todo-meta { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
   .badge-high { background: #fee2e2; color: #dc2626; }
   .badge-medium { background: #fef3c7; color: #d97706; }
   .badge-low { background: #dcfce7; color: #16a34a; }
-  .due-date { font-size: 0.75rem; color: var(--text-muted); }
+  .due-date { font-size: 0.73rem; color: var(--text-muted); }
   .due-date.overdue { color: var(--danger); font-weight: 600; }
-  .todo-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .todo-actions { display: flex; gap: 5px; flex-shrink: 0; }
 
-  /* Event item */
-  .event-item { padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+  /* ── Event ── */
+  .event-item { padding: 13px 14px; display: flex; gap: 10px; align-items: flex-start; }
   .event-color-bar { width: 4px; border-radius: 4px; flex-shrink: 0; min-height: 40px; }
   .event-content { flex: 1; min-width: 0; }
-  .event-title { font-weight: 600; font-size: 0.95rem; word-break: break-word; }
-  .event-time { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
-  .event-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; word-break: break-word; }
-  .event-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .event-title { font-weight: 600; font-size: 0.93rem; word-break: break-word; }
+  .event-time { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+  .event-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; word-break: break-word; }
+  .event-actions { display: flex; gap: 5px; flex-shrink: 0; }
 
-  /* Action buttons */
-  .btn-icon {
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    transition: background 0.15s;
-  }
+  /* ── Buttons ── */
+  .btn-icon { width: 30px; height: 30px; border: none; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; transition: background 0.15s; }
   .btn-edit { background: #f1f5f9; color: #475569; }
   .btn-edit:hover { background: #e2e8f0; }
   .btn-delete { background: #fef2f2; color: #ef4444; }
   .btn-delete:hover { background: #fee2e2; }
 
-  /* Calendar */
-  .calendar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0;
-    margin-bottom: 8px;
-  }
-  .calendar-header h2 { font-size: 1.1rem; font-weight: 700; }
-  .cal-nav-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    background: white;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    color: var(--text);
-  }
-  .calendar-grid {
-    background: white;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    margin-bottom: 16px;
-  }
-  .cal-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    background: #f8fafc;
-    border-bottom: 1px solid var(--border);
-  }
-  .cal-weekday {
-    text-align: center;
-    padding: 8px 2px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--text-muted);
-  }
+  /* ── Filter ── */
+  .filter-bar { display: flex; gap: 7px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 3px; }
+  .filter-btn { padding: 5px 13px; border: 1px solid var(--border); background: white; border-radius: 20px; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  /* ── Calendar ── */
+  .calendar-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; margin-bottom: 6px; }
+  .calendar-header h2 { font-size: 1.05rem; font-weight: 700; }
+  .cal-nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: white; border-radius: 8px; font-size: 1rem; cursor: pointer; color: var(--text); }
+  .calendar-grid { background: white; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7,1fr); background: #f8fafc; border-bottom: 1px solid var(--border); }
+  .cal-weekday { text-align: center; padding: 7px 2px; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
   .cal-weekday:first-child { color: #ef4444; }
   .cal-weekday:last-child { color: #4f8ef7; }
-  .cal-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-  }
-  .cal-day {
-    padding: 6px 4px;
-    min-height: 60px;
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.15s;
-    position: relative;
-  }
+  .cal-days { display: grid; grid-template-columns: repeat(7,1fr); }
+  .cal-day { padding: 5px 3px; min-height: 56px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
   .cal-day:nth-child(7n) { border-right: none; }
   .cal-day:hover { background: #f8faff; }
   .cal-day.today { background: #eff6ff; }
   .cal-day.selected { background: #dbeafe; }
   .cal-day.other-month .cal-day-num { color: #cbd5e1; }
-  .cal-day-num {
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: block;
-    text-align: center;
-    line-height: 1;
-    padding: 2px;
-    margin-bottom: 2px;
-  }
-  .cal-day.today .cal-day-num {
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 2px;
-  }
+  .cal-day-num { font-size: 0.78rem; font-weight: 600; display: block; text-align: center; padding: 2px; margin-bottom: 1px; }
+  .cal-day.today .cal-day-num { background: var(--primary); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
   .cal-day:first-child .cal-day-num, .cal-day:nth-child(7n+1) .cal-day-num { color: #ef4444; }
   .cal-day:nth-child(7n) .cal-day-num { color: #4f8ef7; }
   .cal-dot-wrap { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
-  .cal-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-  }
-  .selected-day-events h3 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-  }
-  .no-items {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
+  .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .selected-day-events h3 { font-size: 0.88rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+  .no-items { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 0.88rem; }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 200;
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-  }
+  /* ── Modal ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
   .modal-overlay.open { display: flex; }
-  .modal {
-    background: white;
-    width: 100%;
-    max-width: 600px;
-    border-radius: 20px 20px 0 0;
-    padding: 24px 20px 32px;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideUp 0.25s ease;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  .modal-title { font-size: 1.1rem; font-weight: 700; }
-  .modal-close {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: #f1f5f9;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    color: var(--text-muted);
-  }
-  .form-group { margin-bottom: 16px; }
-  label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  .modal { background: white; width: 100%; max-width: 600px; border-radius: 20px 20px 0 0; padding: 22px 18px 30px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .modal-title { font-size: 1.05rem; font-weight: 700; }
+  .modal-close { width: 30px; height: 30px; border: none; background: #f1f5f9; border-radius: 8px; font-size: 1rem; cursor: pointer; color: var(--text-muted); }
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
   input[type=text], input[type=datetime-local], input[type=date], textarea, select {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 0.9rem;
-    color: var(--text);
-    background: white;
-    outline: none;
-    transition: border-color 0.2s;
-    font-family: inherit;
+    width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.88rem; color: var(--text); background: white; outline: none;
+    transition: border-color 0.2s; font-family: inherit;
   }
   input:focus, textarea:focus, select:focus { border-color: var(--primary); }
-  textarea { resize: vertical; min-height: 80px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .color-picker-row { display: flex; gap: 10px; }
-  .color-opt {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
+  textarea { resize: vertical; min-height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .color-picker-row { display: flex; gap: 9px; }
+  .color-opt { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.15s; }
   .color-opt:hover { transform: scale(1.15); }
   .color-opt.selected { border-color: #1e293b; }
-  .btn-submit {
-    width: 100%;
-    padding: 14px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: background 0.2s;
-  }
+  .btn-submit { width: 100%; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 6px; transition: background 0.2s; }
   .btn-submit:hover { background: var(--primary-dark); }
 
-  /* Filter bar */
-  .filter-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .filter-btn {
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    background: white;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-  }
-  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-  @media (max-width: 480px) {
-    .form-row { grid-template-columns: 1fr; }
-    .cal-day { min-height: 48px; }
-  }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } .cal-day { min-height: 44px; } }
 </style>
 </head>
 <body>
 
+<!-- ── Auth Screen ── -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">📅</div>
+    <div class="auth-title">일정 & 할일 관리</div>
+    <div class="auth-sub">로그인하고 일정을 관리하세요</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">회원가입</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+
+    <div id="form-login" class="auth-form active">
+      <input class="auth-input" type="text" id="login-username" placeholder="아이디" autocomplete="username">
+      <input class="auth-input" type="password" id="login-password" placeholder="비밀번호" autocomplete="current-password">
+      <button class="auth-btn" onclick="doLogin()">로그인</button>
+    </div>
+    <div id="form-register" class="auth-form">
+      <input class="auth-input" type="text" id="reg-username" placeholder="아이디 (2자 이상)" autocomplete="username">
+      <input class="auth-input" type="password" id="reg-password" placeholder="비밀번호 (4자 이상)" autocomplete="new-password">
+      <button class="auth-btn" onclick="doRegister()">회원가입</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App ── -->
 <header>
-  <h1>📅 일정 &amp; 할일 관리</h1>
-  <p id="today-str"></p>
+  <div class="header-left">
+    <h1>📅 일정 & 할일</h1>
+    <p id="today-str"></p>
+  </div>
+  <div class="header-right">
+    <span class="user-badge" id="header-username"></span>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+  </div>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('todos')">✅ 할일</button>
-  <button class="tab-btn" onclick="switchTab('calendar')">📅 일정</button>
+  <button class="tab-btn active" onclick="switchTab('todos', this)">✅ 할일</button>
+  <button class="tab-btn" onclick="switchTab('calendar', this)">📅 일정</button>
+</div>
+
+<!-- 사용자 필터 -->
+<div class="user-filter-bar" id="user-filter-bar">
+  <button class="user-filter-btn active" data-uid="all" onclick="setUserFilter('all', this)">전체</button>
 </div>
 
 <main>
-  <!-- ── TODOS ── -->
+  <!-- TODOS -->
   <div id="tab-todos" class="tab-panel active">
     <button class="add-btn" onclick="openTodoModal()">＋ 할일 추가</button>
     <div class="filter-bar">
-      <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
-      <button class="filter-btn" onclick="setFilter('active', this)">진행중</button>
-      <button class="filter-btn" onclick="setFilter('done', this)">완료</button>
-      <button class="filter-btn" onclick="setFilter('high', this)">🔴 높음</button>
-      <button class="filter-btn" onclick="setFilter('medium', this)">🟡 보통</button>
-      <button class="filter-btn" onclick="setFilter('low', this)">🟢 낮음</button>
+      <button class="filter-btn active" onclick="setFilter('all',this)">전체</button>
+      <button class="filter-btn" onclick="setFilter('active',this)">진행중</button>
+      <button class="filter-btn" onclick="setFilter('done',this)">완료</button>
+      <button class="filter-btn" onclick="setFilter('high',this)">🔴 높음</button>
+      <button class="filter-btn" onclick="setFilter('medium',this)">🟡 보통</button>
+      <button class="filter-btn" onclick="setFilter('low',this)">🟢 낮음</button>
     </div>
     <div id="todo-list"></div>
   </div>
 
-  <!-- ── CALENDAR ── -->
+  <!-- CALENDAR -->
   <div id="tab-calendar" class="tab-panel">
     <button class="add-btn" onclick="openEventModal()">＋ 일정 추가</button>
     <div class="calendar-header">
@@ -442,12 +281,9 @@
     </div>
     <div class="calendar-grid">
       <div class="cal-weekdays">
-        <div class="cal-weekday">일</div>
-        <div class="cal-weekday">월</div>
-        <div class="cal-weekday">화</div>
-        <div class="cal-weekday">수</div>
-        <div class="cal-weekday">목</div>
-        <div class="cal-weekday">금</div>
+        <div class="cal-weekday">일</div><div class="cal-weekday">월</div>
+        <div class="cal-weekday">화</div><div class="cal-weekday">수</div>
+        <div class="cal-weekday">목</div><div class="cal-weekday">금</div>
         <div class="cal-weekday">토</div>
       </div>
       <div class="cal-days" id="cal-days"></div>
@@ -459,63 +295,37 @@
   </div>
 </main>
 
-<!-- ── TODO MODAL ── -->
+<!-- TODO MODAL -->
 <div class="modal-overlay" id="todo-modal">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="todo-modal-title">할일 추가</span>
       <button class="modal-close" onclick="closeTodoModal()">✕</button>
     </div>
-    <div class="form-group">
-      <label>제목 *</label>
-      <input type="text" id="todo-title" placeholder="할일을 입력하세요">
-    </div>
-    <div class="form-group">
-      <label>설명</label>
-      <textarea id="todo-desc" placeholder="상세 내용 (선택)"></textarea>
-    </div>
+    <div class="form-group"><label>제목 *</label><input type="text" id="todo-title" placeholder="할일을 입력하세요"></div>
+    <div class="form-group"><label>설명</label><textarea id="todo-desc" placeholder="상세 내용 (선택)"></textarea></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>우선순위</label>
-        <select id="todo-priority">
-          <option value="high">🔴 높음</option>
-          <option value="medium" selected>🟡 보통</option>
-          <option value="low">🟢 낮음</option>
-        </select>
+      <div class="form-group"><label>우선순위</label>
+        <select id="todo-priority"><option value="high">🔴 높음</option><option value="medium" selected>🟡 보통</option><option value="low">🟢 낮음</option></select>
       </div>
-      <div class="form-group">
-        <label>마감일</label>
-        <input type="date" id="todo-due">
-      </div>
+      <div class="form-group"><label>마감일</label><input type="date" id="todo-due"></div>
     </div>
     <button class="btn-submit" onclick="saveTodo()">저장</button>
   </div>
 </div>
 
-<!-- ── EVENT MODAL ── -->
+<!-- EVENT MODAL -->
 <div class="modal-overlay" id="event-modal">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="event-modal-title">일정 추가</span>
       <button class="modal-close" onclick="closeEventModal()">✕</button>
     </div>
-    <div class="form-group">
-      <label>제목 *</label>
-      <input type="text" id="event-title" placeholder="일정 제목을 입력하세요">
-    </div>
-    <div class="form-group">
-      <label>설명</label>
-      <textarea id="event-desc" placeholder="상세 내용 (선택)"></textarea>
-    </div>
+    <div class="form-group"><label>제목 *</label><input type="text" id="event-title" placeholder="일정 제목을 입력하세요"></div>
+    <div class="form-group"><label>설명</label><textarea id="event-desc" placeholder="상세 내용 (선택)"></textarea></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>시작</label>
-        <input type="datetime-local" id="event-start">
-      </div>
-      <div class="form-group">
-        <label>종료</label>
-        <input type="datetime-local" id="event-end">
-      </div>
+      <div class="form-group"><label>시작</label><input type="datetime-local" id="event-start"></div>
+      <div class="form-group"><label>종료</label><input type="datetime-local" id="event-end"></div>
     </div>
     <div class="form-group">
       <label>색상</label>
@@ -534,32 +344,75 @@
 </div>
 
 <script>
-const API = '';
-let todos = [], events = [];
-let todoFilter = 'all';
+let todos = [], events = [], currentUser = null;
+let todoFilter = 'all', userFilter = 'all';
 let editingTodoId = null, editingEventId = null;
 let selectedColor = '#4f8ef7';
-let calYear, calMonth;
-let selectedDay = null;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
+let calYear, calMonth, selectedDay = null;
 const now = new Date();
-calYear = now.getFullYear();
-calMonth = now.getMonth();
+calYear = now.getFullYear(); calMonth = now.getMonth();
 
 document.getElementById('today-str').textContent =
   now.toLocaleDateString('ko-KR', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
 
-async function init() {
-  await Promise.all([loadTodos(), loadEvents()]);
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('form-login').classList.toggle('active', tab==='login');
+  document.getElementById('form-register').classList.toggle('active', tab==='register');
+  document.getElementById('auth-error').textContent = '';
 }
 
-// ── API ───────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const res = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password})});
+  const data = await res.json();
+  if (!res.ok) { document.getElementById('auth-error').textContent = data.error; return; }
+  currentUser = data;
+  onLoggedIn();
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const res = await fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password})});
+  const data = await res.json();
+  if (!res.ok) { document.getElementById('auth-error').textContent = data.error; return; }
+  currentUser = data;
+  onLoggedIn();
+}
+
+async function doLogout() {
+  await fetch('/api/logout', {method:'POST'});
+  currentUser = null;
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+function onLoggedIn() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('header-username').textContent = '👤 ' + currentUser.username;
+  loadAll();
+}
+
+async function checkSession() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  if (data) { currentUser = data; onLoggedIn(); }
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadTodos(), loadEvents()]);
+  await loadUserFilter();
+}
+
 async function loadTodos() {
   const res = await fetch('/api/todos');
   todos = await res.json();
   renderTodos();
 }
+
 async function loadEvents() {
   const res = await fetch('/api/events');
   events = await res.json();
@@ -567,15 +420,17 @@ async function loadEvents() {
   if (selectedDay) renderSelectedDay();
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  event.target.classList.add('active');
+async function loadUserFilter() {
+  const res = await fetch('/api/users');
+  const users = await res.json();
+  const bar = document.getElementById('user-filter-bar');
+  const btns = users.map(u =>
+    `<button class="user-filter-btn${userFilter==u.id?' active':''}" data-uid="${u.id}" onclick="setUserFilter(${u.id}, this)">👤 ${esc(u.username)}</button>`
+  ).join('');
+  bar.innerHTML = `<button class="user-filter-btn${userFilter==='all'?' active':''}" data-uid="all" onclick="setUserFilter('all',this)">전체</button>` + btns;
 }
 
-// ── Filter ────────────────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────────────────────────
 function setFilter(f, btn) {
   todoFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -583,286 +438,217 @@ function setFilter(f, btn) {
   renderTodos();
 }
 
+function setUserFilter(uid, btn) {
+  userFilter = uid;
+  document.querySelectorAll('.user-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTodos();
+  renderCalendar();
+  if (selectedDay) renderSelectedDay();
+}
+
+function isOwn(item) { return currentUser && item.user_id === currentUser.id; }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+
 // ── Todos ─────────────────────────────────────────────────────────────────────
 function renderTodos() {
   let list = todos;
+  if (userFilter !== 'all') list = list.filter(t => t.user_id == userFilter);
   if (todoFilter === 'active') list = list.filter(t => !t.completed);
   else if (todoFilter === 'done') list = list.filter(t => t.completed);
-  else if (todoFilter === 'high') list = list.filter(t => t.priority === 'high');
-  else if (todoFilter === 'medium') list = list.filter(t => t.priority === 'medium');
-  else if (todoFilter === 'low') list = list.filter(t => t.priority === 'low');
+  else if (['high','medium','low'].includes(todoFilter)) list = list.filter(t => t.priority === todoFilter);
 
   const el = document.getElementById('todo-list');
-  if (!list.length) {
-    el.innerHTML = '<div class="no-items">할일이 없습니다 🎉</div>';
-    return;
-  }
-  el.innerHTML = list.map(t => `
+  if (!list.length) { el.innerHTML = '<div class="no-items">할일이 없습니다 🎉</div>'; return; }
+  el.innerHTML = list.map(t => todoCard(t)).join('');
+}
+
+function todoCard(t, compact=false) {
+  const own = isOwn(t);
+  const ownerLabel = t.username ? `<span class="owner-badge${own?' mine':''}">${own?'나':esc(t.username)}</span>` : '';
+  return `
     <div class="card">
       <div class="todo-item">
-        <div class="todo-check ${t.completed ? 'done' : ''}" onclick="toggleTodo(${t.id})"></div>
+        <div class="todo-check ${t.completed?'done':''} ${own?'':'readonly'}" ${own?`onclick="toggleTodo(${t.id})"`:''}></div>
         <div class="todo-content">
-          <div class="todo-title ${t.completed ? 'done' : ''}">${esc(t.title)}</div>
-          ${t.description ? `<div class="todo-desc">${esc(t.description)}</div>` : ''}
+          ${ownerLabel}
+          <div class="todo-title ${t.completed?'done':''}">${esc(t.title)}</div>
+          ${t.description?`<div class="todo-desc">${esc(t.description)}</div>`:''}
           <div class="todo-meta">
-            <span class="badge badge-${t.priority}">${
-              t.priority === 'high' ? '🔴 높음' :
-              t.priority === 'medium' ? '🟡 보통' : '🟢 낮음'
-            }</span>
-            ${t.due_date ? `<span class="due-date ${isOverdue(t) ? 'overdue' : ''}">
-              📅 ${formatDate(t.due_date)}${isOverdue(t) ? ' (기한 초과)' : ''}
-            </span>` : ''}
+            <span class="badge badge-${t.priority}">${t.priority==='high'?'🔴 높음':t.priority==='medium'?'🟡 보통':'🟢 낮음'}</span>
+            ${t.due_date?`<span class="due-date ${isOverdue(t)?'overdue':''}">📅 ${formatDate(t.due_date)}${isOverdue(t)?' (기한초과)':''}</span>`:''}
           </div>
         </div>
-        <div class="todo-actions">
+        ${own ? `<div class="todo-actions">
           <button class="btn-icon btn-edit" onclick="editTodo(${t.id})">✏️</button>
           <button class="btn-icon btn-delete" onclick="deleteTodo(${t.id})">🗑️</button>
-        </div>
+        </div>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
 }
 
-function isOverdue(t) {
-  if (!t.due_date || t.completed) return false;
-  return t.due_date < new Date().toISOString().split('T')[0];
-}
-function formatDate(d) {
-  if (!d) return '';
-  const [y,m,day] = d.split('-');
-  return `${y}.${m}.${day}`;
-}
+function isOverdue(t) { return !t.completed && t.due_date && t.due_date < new Date().toISOString().split('T')[0]; }
+function formatDate(d) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}.${m}.${day}`; }
 
 async function toggleTodo(id) {
-  const t = todos.find(x => x.id === id);
-  if (!t) return;
-  await fetch(`/api/todos/${id}`, {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({...t, completed: t.completed ? 0 : 1})
-  });
+  const t = todos.find(x=>x.id===id);
+  if (!t || !isOwn(t)) return;
+  await fetch(`/api/todos/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...t, completed: t.completed?0:1})});
   await loadTodos();
+  if (selectedDay) renderSelectedDay();
 }
 
 async function deleteTodo(id) {
   if (!confirm('삭제하시겠습니까?')) return;
   await fetch(`/api/todos/${id}`, {method:'DELETE'});
   await loadTodos();
+  if (selectedDay) renderSelectedDay();
 }
 
-function openTodoModal(t = null) {
-  editingTodoId = t ? t.id : null;
-  document.getElementById('todo-modal-title').textContent = t ? '할일 수정' : '할일 추가';
-  document.getElementById('todo-title').value = t ? t.title : '';
-  document.getElementById('todo-desc').value = t ? t.description : '';
-  document.getElementById('todo-priority').value = t ? t.priority : 'medium';
-  document.getElementById('todo-due').value = t ? t.due_date : '';
+function openTodoModal(t=null) {
+  editingTodoId = t?t.id:null;
+  document.getElementById('todo-modal-title').textContent = t?'할일 수정':'할일 추가';
+  document.getElementById('todo-title').value = t?t.title:'';
+  document.getElementById('todo-desc').value = t?t.description:'';
+  document.getElementById('todo-priority').value = t?t.priority:'medium';
+  document.getElementById('todo-due').value = t?t.due_date:'';
   document.getElementById('todo-modal').classList.add('open');
-  setTimeout(() => document.getElementById('todo-title').focus(), 300);
+  setTimeout(()=>document.getElementById('todo-title').focus(), 300);
 }
-
-function closeTodoModal() {
-  document.getElementById('todo-modal').classList.remove('open');
-}
-
-function editTodo(id) {
-  const t = todos.find(x => x.id === id);
-  if (t) openTodoModal(t);
-}
+function closeTodoModal() { document.getElementById('todo-modal').classList.remove('open'); }
+function editTodo(id) { const t=todos.find(x=>x.id===id); if(t&&isOwn(t)) openTodoModal(t); }
 
 async function saveTodo() {
   const title = document.getElementById('todo-title').value.trim();
   if (!title) { alert('제목을 입력하세요'); return; }
-  const data = {
-    title,
-    description: document.getElementById('todo-desc').value.trim(),
+  const data = {title, description: document.getElementById('todo-desc').value.trim(),
     priority: document.getElementById('todo-priority').value,
     due_date: document.getElementById('todo-due').value,
-    completed: editingTodoId ? (todos.find(t=>t.id===editingTodoId)?.completed || 0) : 0
-  };
+    completed: editingTodoId?(todos.find(t=>t.id===editingTodoId)?.completed||0):0};
   if (editingTodoId) {
-    await fetch(`/api/todos/${editingTodoId}`, {
-      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-    });
+    await fetch(`/api/todos/${editingTodoId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   } else {
-    await fetch('/api/todos', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-    });
+    await fetch('/api/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   }
-  closeTodoModal();
-  await loadTodos();
+  closeTodoModal(); await loadTodos(); if(selectedDay) renderSelectedDay();
 }
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 function changeMonth(dir) {
   calMonth += dir;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth>11){calMonth=0;calYear++;} if(calMonth<0){calMonth=11;calYear--;}
   renderCalendar();
 }
 
 function renderCalendar() {
-  document.getElementById('cal-title').textContent =
-    `${calYear}년 ${calMonth + 1}월`;
-
+  document.getElementById('cal-title').textContent = `${calYear}년 ${calMonth+1}월`;
   const first = new Date(calYear, calMonth, 1);
-  const last = new Date(calYear, calMonth + 1, 0);
+  const last = new Date(calYear, calMonth+1, 0);
   const startDay = first.getDay();
   const todayStr = toDateStr(now);
 
-  // Build event date map
-  const eventMap = {};
-  events.forEach(e => {
+  let filteredEvents = userFilter==='all' ? events : events.filter(e=>e.user_id==userFilter);
+  let filteredTodos = userFilter==='all' ? todos : todos.filter(t=>t.user_id==userFilter);
+
+  const map = {};
+  filteredEvents.forEach(e => {
     const d = e.start_datetime.split('T')[0];
-    if (!eventMap[d]) eventMap[d] = [];
-    eventMap[d].push({type:'event', data:e});
+    if (!map[d]) map[d]=[];
+    map[d].push({type:'event', data:e});
   });
-  // Add todos with due_date
-  todos.forEach(t => {
+  filteredTodos.forEach(t => {
     if (!t.due_date) return;
-    if (!eventMap[t.due_date]) eventMap[t.due_date] = [];
-    eventMap[t.due_date].push({type:'todo', data:t});
+    if (!map[t.due_date]) map[t.due_date]=[];
+    map[t.due_date].push({type:'todo', data:t});
   });
 
-  let html = '';
-  let dayCount = 1;
-  const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
-
-  for (let i = 0; i < 42; i++) {
+  let html='', dayCount=1;
+  const prevDays = new Date(calYear, calMonth, 0).getDate();
+  for (let i=0; i<42; i++) {
     if (i < startDay) {
-      const d = prevMonthDays - startDay + i + 1;
-      html += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
+      html += `<div class="cal-day other-month"><span class="cal-day-num">${prevDays-startDay+i+1}</span></div>`;
     } else if (dayCount > last.getDate()) {
-      const d = dayCount - last.getDate();
-      dayCount++;
-      html += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
+      html += `<div class="cal-day other-month"><span class="cal-day-num">${dayCount++ - last.getDate()}</span></div>`;
     } else {
-      const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dayCount).padStart(2,'0')}`;
-      const isToday = dateStr === todayStr;
-      const isSel = dateStr === selectedDay;
-      const dayItems = eventMap[dateStr] || [];
-      const dots = dayItems.slice(0,4).map(item =>
-        item.type === 'event'
+      const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dayCount).padStart(2,'0')}`;
+      const items = map[ds]||[];
+      const dots = items.slice(0,4).map(item =>
+        item.type==='event'
           ? `<div class="cal-dot" style="background:${item.data.color}"></div>`
-          : `<div class="cal-dot" style="background:#94a3b8;border:1px solid #64748b"></div>`
+          : `<div class="cal-dot" style="background:#94a3b8"></div>`
       ).join('');
-      html += `
-        <div class="cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="selectCalDay('${dateStr}')">
-          <span class="cal-day-num">${dayCount}</span>
-          <div class="cal-dot-wrap">${dots}</div>
-        </div>`;
+      html += `<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')">
+        <span class="cal-day-num">${dayCount}</span>
+        <div class="cal-dot-wrap">${dots}</div>
+      </div>`;
       dayCount++;
     }
   }
-
   document.getElementById('cal-days').innerHTML = html;
 }
 
-function selectCalDay(dateStr) {
-  selectedDay = dateStr;
-  renderCalendar();
-  renderSelectedDay();
-}
+function selectCalDay(ds) { selectedDay=ds; renderCalendar(); renderSelectedDay(); }
 
 function renderSelectedDay() {
   if (!selectedDay) return;
-  const [y, m, d] = selectedDay.split('-');
-  document.getElementById('selected-day-title').textContent =
-    `${y}년 ${m}월 ${d}일`;
+  const [y,m,d] = selectedDay.split('-');
+  document.getElementById('selected-day-title').textContent = `${y}년 ${m}월 ${d}일`;
 
-  const dayEvents = events.filter(e => e.start_datetime.startsWith(selectedDay));
-  const dayTodos = todos.filter(t => t.due_date === selectedDay);
+  let dayEvents = events.filter(e=>e.start_datetime.startsWith(selectedDay));
+  let dayTodos = todos.filter(t=>t.due_date===selectedDay);
+  if (userFilter!=='all') {
+    dayEvents = dayEvents.filter(e=>e.user_id==userFilter);
+    dayTodos = dayTodos.filter(t=>t.user_id==userFilter);
+  }
   const el = document.getElementById('selected-events');
-
   if (!dayEvents.length && !dayTodos.length) {
-    el.innerHTML = '<div class="no-items" style="padding:20px">이 날의 일정/할일이 없습니다</div>';
-    return;
+    el.innerHTML = '<div class="no-items" style="padding:20px">이 날의 일정/할일이 없습니다</div>'; return;
   }
 
-  const eventHtml = dayEvents.map(e => `
-    <div class="card">
-      <div class="event-item">
-        <div class="event-color-bar" style="background:${e.color}"></div>
-        <div class="event-content">
-          <div class="event-title">${esc(e.title)}</div>
-          <div class="event-time">${formatDatetime(e.start_datetime)}${e.end_datetime ? ' → ' + formatDatetime(e.end_datetime) : ''}</div>
-          ${e.description ? `<div class="event-desc">${esc(e.description)}</div>` : ''}
-        </div>
-        <div class="event-actions">
-          <button class="btn-icon btn-edit" onclick="editEvent(${e.id})">✏️</button>
-          <button class="btn-icon btn-delete" onclick="deleteEvent(${e.id})">🗑️</button>
-        </div>
+  const eventHtml = dayEvents.map(e => {
+    const own = isOwn(e);
+    const ownerLabel = e.username ? `<span class="owner-badge${own?' mine':''}">${own?'나':esc(e.username)}</span>` : '';
+    return `<div class="card"><div class="event-item">
+      <div class="event-color-bar" style="background:${e.color}"></div>
+      <div class="event-content">
+        ${ownerLabel}
+        <div class="event-title">${esc(e.title)}</div>
+        <div class="event-time">${formatDatetime(e.start_datetime)}${e.end_datetime?' → '+formatDatetime(e.end_datetime):''}</div>
+        ${e.description?`<div class="event-desc">${esc(e.description)}</div>`:''}
       </div>
-    </div>
-  `).join('');
+      ${own?`<div class="event-actions">
+        <button class="btn-icon btn-edit" onclick="editEvent(${e.id})">✏️</button>
+        <button class="btn-icon btn-delete" onclick="deleteEvent(${e.id})">🗑️</button>
+      </div>`:''}
+    </div></div>`;
+  }).join('');
 
-  const todoHtml = dayTodos.map(t => `
-    <div class="card">
-      <div class="todo-item">
-        <div class="todo-check ${t.completed ? 'done' : ''}" onclick="toggleTodo(${t.id})"></div>
-        <div class="todo-content">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:2px;">✅ 할일</div>
-          <div class="todo-title ${t.completed ? 'done' : ''}">${esc(t.title)}</div>
-          ${t.description ? `<div class="todo-desc">${esc(t.description)}</div>` : ''}
-          <div class="todo-meta">
-            <span class="badge badge-${t.priority}">${
-              t.priority === 'high' ? '🔴 높음' :
-              t.priority === 'medium' ? '🟡 보통' : '🟢 낮음'
-            }</span>
-          </div>
-        </div>
-        <div class="todo-actions">
-          <button class="btn-icon btn-edit" onclick="editTodo(${t.id})">✏️</button>
-          <button class="btn-icon btn-delete" onclick="deleteTodo(${t.id})">🗑️</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  el.innerHTML = eventHtml + todoHtml;
-}
-
-function formatDatetime(dt) {
-  if (!dt) return '';
-  const d = new Date(dt);
-  return d.toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
-}
-
-function toDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  el.innerHTML = eventHtml + dayTodos.map(t => todoCard(t)).join('');
 }
 
 // ── Events CRUD ───────────────────────────────────────────────────────────────
-function openEventModal(e = null) {
-  editingEventId = e ? e.id : null;
-  document.getElementById('event-modal-title').textContent = e ? '일정 수정' : '일정 추가';
-  document.getElementById('event-title').value = e ? e.title : '';
-  document.getElementById('event-desc').value = e ? e.description : '';
-
-  // Default datetime: selected day or now
-  const defaultDt = selectedDay
-    ? `${selectedDay}T09:00`
-    : new Date().toISOString().slice(0,16);
-  document.getElementById('event-start').value = e ? e.start_datetime.slice(0,16) : defaultDt;
-  document.getElementById('event-end').value = e && e.end_datetime ? e.end_datetime.slice(0,16) : '';
-
-  selectedColor = e ? e.color : '#4f8ef7';
-  document.querySelectorAll('.color-opt').forEach(el => {
-    el.classList.toggle('selected', el.dataset.color === selectedColor);
-  });
-
+function openEventModal(e=null) {
+  editingEventId = e?e.id:null;
+  document.getElementById('event-modal-title').textContent = e?'일정 수정':'일정 추가';
+  document.getElementById('event-title').value = e?e.title:'';
+  document.getElementById('event-desc').value = e?e.description:'';
+  const def = selectedDay?`${selectedDay}T09:00`:new Date().toISOString().slice(0,16);
+  document.getElementById('event-start').value = e?e.start_datetime.slice(0,16):def;
+  document.getElementById('event-end').value = e&&e.end_datetime?e.end_datetime.slice(0,16):'';
+  selectedColor = e?e.color:'#4f8ef7';
+  document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('selected', el.dataset.color===selectedColor));
   document.getElementById('event-modal').classList.add('open');
-  setTimeout(() => document.getElementById('event-title').focus(), 300);
+  setTimeout(()=>document.getElementById('event-title').focus(), 300);
 }
-
-function closeEventModal() {
-  document.getElementById('event-modal').classList.remove('open');
-}
-
-function editEvent(id) {
-  const e = events.find(x => x.id === id);
-  if (e) openEventModal(e);
-}
+function closeEventModal() { document.getElementById('event-modal').classList.remove('open'); }
+function editEvent(id) { const e=events.find(x=>x.id===id); if(e&&isOwn(e)) openEventModal(e); }
 
 async function deleteEvent(id) {
   if (!confirm('삭제하시겠습니까?')) return;
@@ -871,9 +657,8 @@ async function deleteEvent(id) {
 }
 
 function selectColor(el) {
-  document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedColor = el.dataset.color;
+  document.querySelectorAll('.color-opt').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected'); selectedColor=el.dataset.color;
 }
 
 async function saveEvent() {
@@ -881,49 +666,33 @@ async function saveEvent() {
   if (!title) { alert('제목을 입력하세요'); return; }
   const start = document.getElementById('event-start').value;
   if (!start) { alert('시작 시간을 입력하세요'); return; }
-  const data = {
-    title,
-    description: document.getElementById('event-desc').value.trim(),
-    start_datetime: start,
-    end_datetime: document.getElementById('event-end').value || '',
-    color: selectedColor
-  };
+  const data = {title, description: document.getElementById('event-desc').value.trim(),
+    start_datetime: start, end_datetime: document.getElementById('event-end').value||'', color: selectedColor};
   if (editingEventId) {
-    await fetch(`/api/events/${editingEventId}`, {
-      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-    });
+    await fetch(`/api/events/${editingEventId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   } else {
-    await fetch('/api/events', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-    });
+    await fetch('/api/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
   }
-  closeEventModal();
-  await loadEvents();
+  closeEventModal(); await loadEvents();
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-function esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function formatDatetime(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return d.toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 
 // Close modal on overlay click
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) {
-      overlay.classList.remove('open');
-    }
-  });
-});
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+document.getElementById('todo-title').addEventListener('keydown', e => { if(e.key==='Enter') saveTodo(); });
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('reg-password').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
 
-// Enter key in title fields
-document.getElementById('todo-title').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveTodo();
-});
-document.getElementById('event-title').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('event-start').focus();
-});
-
-init();
+// Start
+checkSession();
 </script>
 </body>
 </html>
