@@ -191,6 +191,28 @@ def me():
         return jsonify(None)
     return jsonify({'id': session['user_id'], 'username': session['username']})
 
+@app.route('/api/seed')
+def seed_db():
+    secret = request.args.get('secret', '')
+    seed_secret = os.environ.get('SEED_SECRET', '')
+    if not seed_secret or secret != seed_secret:
+        return jsonify({'error': '권한 없음'}), 403
+
+    conn, driver = get_db()
+    cur = conn.cursor()
+    for tbl in ('comments', 'todos', 'events', 'users'):
+        cur.execute(f'DELETE FROM {tbl}')
+    conn.commit()
+    conn.close()
+
+    from werkzeug.security import generate_password_hash
+    for username, password in [('혜수', '1234'), ('상현', '1234')]:
+        insert('INSERT INTO users (username, password_hash) VALUES (?,?)',
+               (username, generate_password_hash(password)))
+
+    return jsonify({'ok': True, 'message': '초기화 완료. 혜수/상현 계정 생성됨 (비밀번호: 1234)'})
+
+
 @app.route('/api/change-password', methods=['POST'])
 @login_required
 def change_password():
