@@ -96,6 +96,20 @@ main{padding:12px;max-width:800px;margin:0 auto;}
 .due-date.overdue{color:var(--danger);font-weight:600;}
 .todo-actions{display:flex;gap:4px;flex-shrink:0;}
 
+/* ── Todo sections (grouped view) ── */
+.todo-section{margin-bottom:6px;}
+.section-header{display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;user-select:none;}
+.section-header:hover{opacity:.8;}
+.section-title-text{font-size:.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.section-count-badge{background:var(--border);color:var(--text-muted);font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:20px;}
+.section-chevron{font-size:1rem;color:var(--text-muted);margin-left:auto;transition:transform .2s;}
+.section-chevron.collapsed{transform:rotate(-90deg);}
+.section-body{overflow:hidden;}
+.section-body.collapsed{display:none;}
+.section-overdue .section-title-text{color:#ef4444;}
+.section-today .section-title-text{color:#f59e0b;}
+.section-week .section-title-text{color:var(--primary);}
+
 /* ── Event ── */
 .event-item{padding:12px 13px;display:flex;gap:10px;align-items:flex-start;}
 .event-color-bar{width:4px;border-radius:4px;flex-shrink:0;min-height:40px;}
@@ -155,6 +169,9 @@ main{padding:12px;max-width:800px;margin:0 auto;}
 .no-items{text-align:center;padding:36px 20px;color:var(--text-muted);font-size:.86rem;}
 
 /* ── Stats ── */
+.stats-user-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px;}
+.stats-user-tab{padding:6px 14px;border:1.5px solid var(--border);background:var(--card);border-radius:20px;font-size:.78rem;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;}
+.stats-user-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
 .stat-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:16px;text-align:center;box-shadow:var(--shadow);}
 .stat-num{font-size:2rem;font-weight:800;color:var(--primary);}
@@ -205,6 +222,13 @@ textarea{resize:vertical;min-height:65px;}
 .tag-selector{display:flex;flex-wrap:wrap;gap:6px;}
 .tag-sel-btn{padding:4px 11px;border:1.5px solid var(--border);background:var(--input-bg);border-radius:20px;font-size:.75rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .15s;}
 .tag-sel-btn.selected{color:#fff;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);padding:10px 22px;border-radius:24px;font-size:.85rem;font-weight:600;color:#fff;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;max-width:88vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast-success{background:#22c55e;}
+.toast-error{background:#ef4444;}
+.toast-info{background:#4f8ef7;}
 
 @media(max-width:480px){.form-row{grid-template-columns:1fr;}.cal-day{min-height:42px;}.stats-grid{grid-template-columns:repeat(2,1fr);}}
 </style>
@@ -379,7 +403,7 @@ function tagColor(name) { return TAGS.find(t=>t.name===name)?.color || '#94a3b8'
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let todos=[], events=[], currentUser=null;
-let todoFilter='all', userFilter='all', tagFilter=null;
+let todoFilter='all', userFilter='all', tagFilter=null, statsUserFilter='all';
 let editingTodoId=null, editingEventId=null;
 let selectedColor='#4f8ef7', selectedTodoTags=new Set(), selectedEventTags=new Set();
 let calYear, calMonth, selectedDay=null;
@@ -389,6 +413,16 @@ calYear=now.getFullYear(); calMonth=now.getMonth();
 
 document.getElementById('today-str').textContent =
   now.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),280);},2800);
+}
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 function initDark() {
@@ -504,7 +538,52 @@ function renderTodos(){
   if(tagFilter) list=list.filter(t=>(t.tags||'').split(',').includes(tagFilter));
   const el=document.getElementById('todo-list');
   if(!list.length){el.innerHTML='<div class="no-items">할일이 없습니다 🎉</div>';return;}
-  el.innerHTML=list.map(t=>todoCard(t)).join('');
+
+  // Flat view for priority / done filter
+  if(['high','medium','low','done'].includes(todoFilter)){
+    el.innerHTML=list.map(t=>todoCard(t)).join(''); return;
+  }
+
+  // Grouped view for all / active
+  const todayStr=toDateStr(now);
+  const weekEndStr=toDateStr(new Date(now.getFullYear(),now.getMonth(),now.getDate()+7));
+  const active=list.filter(t=>!t.completed);
+  const done=list.filter(t=>t.completed);
+
+  const overdue=active.filter(t=>t.due_date&&t.due_date<todayStr);
+  const todayItems=active.filter(t=>t.due_date===todayStr);
+  const thisWeek=active.filter(t=>t.due_date&&t.due_date>todayStr&&t.due_date<=weekEndStr);
+  const later=active.filter(t=>!t.due_date||t.due_date>weekEndStr);
+
+  let html='';
+  if(overdue.length) html+=todoSectionHtml('🚨 기한 초과','section-overdue',overdue,false);
+  if(todayItems.length) html+=todoSectionHtml('📌 오늘 마감','section-today',todayItems,false);
+  if(thisWeek.length) html+=todoSectionHtml('📅 이번 주','section-week',thisWeek,false);
+  if(later.length) html+=todoSectionHtml('📋 나중에','',later,false);
+  if(done.length) html+=todoSectionHtml(`✅ 완료 (${done.length})`,'',done,true);
+  if(!html) html='<div class="no-items">할일이 없습니다 🎉</div>';
+  el.innerHTML=html;
+}
+
+function todoSectionHtml(title, cls, items, collapsed){
+  const id='sec_'+Math.random().toString(36).slice(2,8);
+  return `<div class="todo-section ${cls}">
+    <div class="section-header" onclick="toggleSection('${id}')">
+      <span class="section-title-text">${title}</span>
+      <span class="section-count-badge">${items.length}</span>
+      <span class="section-chevron${collapsed?' collapsed':''}" id="chv-${id}">⌄</span>
+    </div>
+    <div class="section-body${collapsed?' collapsed':''}" id="${id}">
+      ${items.map(t=>todoCard(t)).join('')}
+    </div>
+  </div>`;
+}
+function toggleSection(id){
+  const body=document.getElementById(id);
+  const chv=document.getElementById('chv-'+id);
+  if(!body||!chv)return;
+  body.classList.toggle('collapsed');
+  chv.classList.toggle('collapsed');
 }
 
 function todoCard(t){
@@ -544,12 +623,17 @@ function formatDate(d){if(!d)return '';const[y,m,day]=d.split('-');return `${y}.
 
 async function toggleTodo(id){
   const t=todos.find(x=>x.id===id); if(!t||!isOwn(t))return;
-  await fetch(`/api/todos/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...t,completed:t.completed?0:1})});
+  const nowDone=!t.completed;
+  await fetch(`/api/todos/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...t,completed:nowDone?1:0})});
+  showToast(nowDone?`✅ "${t.title}" 완료!`:`↩️ "${t.title}" 다시 진행중`,'info');
   await loadTodos(); if(selectedDay)renderSelectedDay();
 }
 async function deleteTodo(id){
   if(!confirm('삭제하시겠습니까?'))return;
-  await fetch(`/api/todos/${id}`,{method:'DELETE'}); delete commentCache[`todo_${id}`]; await loadTodos(); if(selectedDay)renderSelectedDay();
+  const t=todos.find(x=>x.id===id);
+  await fetch(`/api/todos/${id}`,{method:'DELETE'}); delete commentCache[`todo_${id}`];
+  showToast('🗑️ 할일이 삭제되었습니다','error');
+  await loadTodos(); if(selectedDay)renderSelectedDay();
 }
 function openTodoModal(t=null){
   editingTodoId=t?t.id:null;
@@ -573,12 +657,15 @@ async function saveTodo(){
     due_date:document.getElementById('todo-due').value,
     tags:[...selectedTodoTags].join(','),
     completed:editingTodoId?(todos.find(t=>t.id===editingTodoId)?.completed||0):0};
-  if(editingTodoId){
+  const isEdit=!!editingTodoId;
+  if(isEdit){
     await fetch(`/api/todos/${editingTodoId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   }else{
     await fetch('/api/todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   }
-  closeTodoModal(); await loadTodos(); if(selectedDay)renderSelectedDay();
+  closeTodoModal();
+  showToast(isEdit?`✏️ "${title}" 수정됨`:`➕ "${title}" 추가됨`,'success');
+  await loadTodos(); if(selectedDay)renderSelectedDay();
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────────
@@ -626,7 +713,7 @@ async function sendComment(key){
   input.value='';
   await fetchComments(key);
   document.getElementById(`cs-${key}`).innerHTML=renderCommentsHtml(commentCache[key],key);
-  // Update comment count
+  showToast('💬 댓글이 등록되었습니다','info');
   if(type==='todo'){const t=todos.find(x=>x.id==id);if(t)t.comment_count=(commentCache[key]||[]).length;}
   else{const e=events.find(x=>x.id==id);if(e)e.comment_count=(commentCache[key]||[]).length;}
   const toggleBtn=document.querySelector(`#card-${key} .comment-toggle`);
@@ -724,7 +811,10 @@ function closeEventModal(){document.getElementById('event-modal').classList.remo
 function editEvent(id){const e=events.find(x=>x.id===id);if(e&&isOwn(e))openEventModal(e);}
 async function deleteEvent(id){
   if(!confirm('삭제하시겠습니까?'))return;
-  await fetch(`/api/events/${id}`,{method:'DELETE'});delete commentCache[`event_${id}`];await loadEvents();
+  const e=events.find(x=>x.id===id);
+  await fetch(`/api/events/${id}`,{method:'DELETE'});delete commentCache[`event_${id}`];
+  showToast('🗑️ 일정이 삭제되었습니다','error');
+  await loadEvents();
 }
 function selectColor(el){document.querySelectorAll('.color-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedColor=el.dataset.color;}
 async function saveEvent(){
@@ -735,26 +825,50 @@ async function saveEvent(){
   const data={title,description:document.getElementById('event-desc').value.trim(),
     start_datetime:start,end_datetime:document.getElementById('event-end').value||'',
     color:selectedColor,tags:[...selectedEventTags].join(',')};
-  if(editingEventId){
+  const isEdit=!!editingEventId;
+  if(isEdit){
     await fetch(`/api/events/${editingEventId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   }else{
     await fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   }
-  closeEventModal();await loadEvents();
+  closeEventModal();
+  showToast(isEdit?`✏️ "${title}" 수정됨`:`📅 "${title}" 추가됨`,'success');
+  await loadEvents();
 }
 
 // ── Statistics ────────────────────────────────────────────────────────────────
+function setStatsUser(uid){
+  statsUserFilter=uid;
+  renderStats();
+}
+
 function renderStats(){
   const el=document.getElementById('stats-content');
   if(!el||!document.getElementById('tab-stats').classList.contains('active'))return;
 
-  const total=todos.length,completed=todos.filter(t=>t.completed).length;
+  // Collect users from data
+  const userMap={};
+  todos.forEach(t=>{if(t.user_id&&t.username&&!userMap[t.user_id])userMap[t.user_id]=t.username;});
+  events.forEach(e=>{if(e.user_id&&e.username&&!userMap[e.user_id])userMap[e.user_id]=e.username;});
+  const userList=Object.entries(userMap);
+
+  // User tabs
+  const tabsHtml=`<div class="stats-user-tabs">
+    <button class="stats-user-tab${statsUserFilter==='all'?' active':''}" onclick="setStatsUser('all')">📊 전체</button>
+    ${userList.map(([id,name])=>`<button class="stats-user-tab${statsUserFilter==id?' active':''}" onclick="setStatsUser(${id})">👤 ${esc(name)}</button>`).join('')}
+  </div>`;
+
+  // Filter data
+  const ftodos=statsUserFilter==='all'?todos:todos.filter(t=>t.user_id==statsUserFilter);
+  const fevents=statsUserFilter==='all'?events:events.filter(e=>e.user_id==statsUserFilter);
+
+  const total=ftodos.length,completed=ftodos.filter(t=>t.completed).length;
   const pending=total-completed,rate=total?Math.round(completed/total*100):0;
   const thisMonth=new Date().toISOString().slice(0,7);
-  const eventsThisMonth=events.filter(e=>e.start_datetime.startsWith(thisMonth)).length;
+  const eventsThisMonth=fevents.filter(e=>e.start_datetime.startsWith(thisMonth)).length;
 
   // Priority breakdown
-  const pGroups={high:todos.filter(t=>t.priority==='high'),medium:todos.filter(t=>t.priority==='medium'),low:todos.filter(t=>t.priority==='low')};
+  const pGroups={high:ftodos.filter(t=>t.priority==='high'),medium:ftodos.filter(t=>t.priority==='medium'),low:ftodos.filter(t=>t.priority==='low')};
   const pBar=(items,cls)=>{const r=items.length?Math.round(items.filter(t=>t.completed).length/items.length*100):0;
     return `<div class="progress-wrap">
       <div class="progress-label"><span>${cls==='bar-high'?'🔴 높음':cls==='bar-medium'?'🟡 보통':'🟢 낮음'} (${items.length}개)</span><span>${r}%</span></div>
@@ -765,10 +879,10 @@ function renderStats(){
   // Monthly chart (last 6 months)
   const months=[];
   for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}
-  const maxCount=Math.max(1,...months.map(m=>todos.filter(t=>t.created_at&&t.created_at.startsWith(m)).length));
+  const maxCount=Math.max(1,...months.map(m=>ftodos.filter(t=>t.created_at&&t.created_at.startsWith(m)).length));
   const monthBars=months.map(m=>{
-    const created=todos.filter(t=>t.created_at&&t.created_at.startsWith(m)).length;
-    const done=todos.filter(t=>t.created_at&&t.created_at.startsWith(m)&&t.completed).length;
+    const created=ftodos.filter(t=>t.created_at&&t.created_at.startsWith(m)).length;
+    const done=ftodos.filter(t=>t.created_at&&t.created_at.startsWith(m)&&t.completed).length;
     const h=Math.round(created/maxCount*70);const dh=created?Math.round(done/created*h):0;
     const label=m.slice(5)+'월';
     return `<div class="month-bar-wrap">
@@ -780,18 +894,30 @@ function renderStats(){
     </div>`;
   }).join('');
 
-  // Per-user stats
-  const userMap={};
-  todos.forEach(t=>{
-    const k=t.username||'(미지정)';
-    if(!userMap[k])userMap[k]={total:0,done:0};
-    userMap[k].total++;if(t.completed)userMap[k].done++;
-  });
-  const userRows=Object.entries(userMap).map(([name,s])=>
-    `<tr><td>${esc(name)}</td><td>${s.total}</td><td>${s.done}</td><td>${s.total?Math.round(s.done/s.total*100):0}%</td></tr>`
-  ).join('');
+  // Per-user table (only shown in 전체 view)
+  let userTableHtml='';
+  if(statsUserFilter==='all'){
+    const uMap={};
+    todos.forEach(t=>{
+      const k=t.username||'(미지정)';
+      if(!uMap[k])uMap[k]={total:0,done:0};
+      uMap[k].total++;if(t.completed)uMap[k].done++;
+    });
+    const userRows=Object.entries(uMap).map(([name,s])=>
+      `<tr><td>${esc(name)}</td><td>${s.total}</td><td>${s.done}</td><td>${s.total?Math.round(s.done/s.total*100):0}%</td></tr>`
+    ).join('');
+    if(userRows) userTableHtml=`<div class="section-title">사용자별 현황</div>
+    <div class="card" style="overflow:hidden"><table class="user-stats-table">
+      <thead><tr><th>사용자</th><th>전체</th><th>완료</th><th>완료율</th></tr></thead>
+      <tbody>${userRows}</tbody>
+    </table></div>`;
+  }
+
+  const userName=statsUserFilter==='all'?'전체':userMap[statsUserFilter]||'';
 
   el.innerHTML=`
+    ${tabsHtml}
+    ${statsUserFilter!=='all'?`<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;font-weight:600;">👤 ${esc(userName)} 의 통계</div>`:''}
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">전체 할일</div></div>
       <div class="stat-card"><div class="stat-num" style="color:#22c55e">${completed}</div><div class="stat-label">완료</div></div>
@@ -812,11 +938,7 @@ function renderStats(){
         <span><span class="legend-dot" style="background:#22c55e"></span>완료</span>
       </div>
     </div>
-    ${userRows?`<div class="section-title">사용자별 현황</div>
-    <div class="card" style="overflow:hidden"><table class="user-stats-table">
-      <thead><tr><th>사용자</th><th>전체</th><th>완료</th><th>완료율</th></tr></thead>
-      <tbody>${userRows}</tbody>
-    </table></div>`:''}
+    ${userTableHtml}
   `;
 }
 
@@ -851,7 +973,7 @@ async function changePassword(){
   const d=await r.json();
   if(!r.ok){errEl.textContent=d.error;return;}
   closePwModal();
-  alert('비밀번호가 변경되었습니다.');
+  showToast('🔑 비밀번호가 변경되었습니다','success');
 }
 document.getElementById('pw-confirm').addEventListener('keydown',e=>{if(e.key==='Enter')changePassword();});
 
