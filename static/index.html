@@ -181,19 +181,22 @@ body.dark .recurrence-badge{background:#14532d;color:#86efac;}
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg);border-bottom:1px solid var(--border);}
 .cal-weekday{text-align:center;padding:6px 2px;font-size:.68rem;font-weight:600;color:var(--text-muted);}
 .cal-weekday:first-child{color:#ef4444;} .cal-weekday:last-child{color:#4f8ef7;}
-.cal-days{display:grid;grid-template-columns:repeat(7,1fr);}
-.cal-day{padding:4px 2px;min-height:52px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
-.cal-day:nth-child(7n){border-right:none;}
+.cal-days{display:block;}
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr);position:relative;border-bottom:1px solid var(--border);}
+.cal-week:last-child{border-bottom:none;}
+.cal-day{padding:4px 2px 4px;border-right:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative;box-sizing:border-box;}
+.cal-day:last-child{border-right:none;}
 .cal-day:hover{background:var(--bg);}
 .cal-day.today{background:#eff6ff;} body.dark .cal-day.today{background:#1e3a5f;}
 .cal-day.selected{background:#dbeafe;} body.dark .cal-day.selected{background:#1e3055;}
 .cal-day.other-month .cal-day-num{color:#cbd5e1;}
-.cal-day-num{font-size:.75rem;font-weight:600;display:block;text-align:center;padding:2px;margin-bottom:1px;}
-.cal-day.today .cal-day-num{background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 2px;}
+.cal-day-num{font-size:.75rem;font-weight:600;display:block;text-align:center;padding:2px;margin-bottom:0;}
+.cal-day.today .cal-day-num{background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin:0 auto;}
 .cal-day:first-child .cal-day-num,.cal-day:nth-child(7n+1) .cal-day-num{color:#ef4444;}
 .cal-day:nth-child(7n) .cal-day-num{color:#4f8ef7;}
-.cal-dot-wrap{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;}
-.cal-dot{width:5px;height:5px;border-radius:50%;}
+.cal-todo-dot{display:block;width:5px;height:5px;border-radius:50%;background:#94a3b8;margin:2px auto 0;}
+.cal-events-overlay{position:absolute;left:0;right:0;top:0;pointer-events:none;}
+.cal-evt-bar{position:absolute;height:18px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:auto;cursor:pointer;padding:0 5px;line-height:1;}
 .selected-day-events h3{font-size:.85rem;font-weight:700;color:var(--text-muted);margin-bottom:8px;}
 .no-items{text-align:center;padding:36px 20px;color:var(--text-muted);font-size:.86rem;}
 
@@ -300,6 +303,25 @@ textarea{resize:vertical;min-height:65px;}
 .activity-time{font-size:.68rem;color:var(--text-muted);margin-top:3px;}
 .activity-type-icon{font-size:.75rem;margin-right:2px;}
 .activity-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:.86rem;}
+.activity-panel-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+.activity-footer-btn{width:100%;padding:9px;border:1.5px solid var(--border);background:var(--bg);color:var(--text-muted);border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;}
+.activity-footer-btn:hover{border-color:var(--primary);color:var(--primary);}
+
+/* ── Changelog modal ── */
+.changelog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:20px;}
+.changelog-overlay.open{display:flex;}
+.changelog-box{background:var(--card);border-radius:16px;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.changelog-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.changelog-header h3{font-size:1rem;font-weight:700;}
+.changelog-close{width:30px;height:30px;border:none;background:var(--bg);border-radius:8px;font-size:1rem;cursor:pointer;color:var(--text-muted);}
+.changelog-body{overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:20px;}
+.cl-version{display:flex;flex-direction:column;gap:8px;}
+.cl-version-header{display:flex;align-items:center;gap:8px;}
+.cl-version-tag{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--primary);color:#fff;}
+.cl-version-date{font-size:.72rem;color:var(--text-muted);}
+.cl-items{display:flex;flex-direction:column;gap:5px;padding-left:4px;}
+.cl-item{display:flex;gap:8px;align-items:flex-start;font-size:.82rem;color:var(--text);}
+.cl-item-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:5px;}
 
 /* ── Toast ── */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);padding:10px 22px;border-radius:24px;font-size:.85rem;font-weight:600;color:#fff;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;max-width:88vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);}
@@ -350,6 +372,91 @@ body.dark .allday-badge{background:#0c4a6e;color:#7dd3fc;}
   </div>
   <div class="activity-list" id="activity-list">
     <div class="activity-empty">불러오는 중...</div>
+  </div>
+  <div class="activity-panel-footer">
+    <button class="activity-footer-btn" onclick="openChangelog()">🆕 앱 업데이트 기록 보기</button>
+  </div>
+</div>
+
+<!-- Changelog -->
+<div class="changelog-overlay" id="changelog-overlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="changelog-box">
+    <div class="changelog-header">
+      <h3>🆕 업데이트 기록</h3>
+      <button class="changelog-close" onclick="closeChangelog()">✕</button>
+    </div>
+    <div class="changelog-body">
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.5</span>
+          <span class="cl-version-date">2025-03</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>달력 멀티데이 일정 — 여러 날에 걸친 일정을 색상 바로 이어서 표시</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>달력 열/행 너비 균일화 — 날짜 칸 세로 폭 자동 조정</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>오늘 버튼 — 달력에서 현재 월로 즉시 이동</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>앱 업데이트 기록 보기 추가</span></div>
+        </div>
+      </div>
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.4</span>
+          <span class="cl-version-date">2025-03</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>일기 기능 — 날짜별 일기 작성, 수정, 삭제</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>일기 댓글 — 기존 댓글 시스템 연동</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>전체 시간 한국시간(KST) 통일 — 댓글·활동로그 시간 정확도 개선</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>활동 로그 상대·절대 시간 동시 표시</span></div>
+        </div>
+      </div>
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.3</span>
+          <span class="cl-version-date">2025-03</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>매년 반복 일정 추가</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>하루종일 토글 — 시간 없이 날짜만 지정하는 이벤트</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>모바일 헤더 레이아웃 개선</span></div>
+        </div>
+      </div>
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.2</span>
+          <span class="cl-version-date">2025-02</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>주간(Week) 뷰 — 시간대별 일정 그리드</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>일정 색상 지정 및 반복 옵션 (매일·매주·매월)</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>태그 필터 및 우선순위 설정</span></div>
+        </div>
+      </div>
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.1</span>
+          <span class="cl-version-date">2025-02</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>다크모드 지원</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>통계 탭 — 완료율, 우선순위 분포 차트</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>댓글 기능 — 할일·일정에 댓글 작성</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>활동 로그 패널</span></div>
+        </div>
+      </div>
+      <div class="cl-version">
+        <div class="cl-version-header">
+          <span class="cl-version-tag">v1.0</span>
+          <span class="cl-version-date">2025-01</span>
+        </div>
+        <div class="cl-items">
+          <div class="cl-item"><div class="cl-item-dot"></div><span>할일 목록 — 추가, 완료, 우선순위, 태그</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>월간 달력 뷰</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>멀티유저 — 계정별 데이터 분리 및 공유 뷰</span></div>
+          <div class="cl-item"><div class="cl-item-dot"></div><span>PostgreSQL 연동 (Render 배포)</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -434,6 +541,7 @@ body.dark .allday-badge{background:#0c4a6e;color:#7dd3fc;}
       <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
       <h2 id="cal-title"></h2>
       <div style="display:flex;align-items:center;gap:6px;">
+        <button class="cal-nav-btn" onclick="goToToday()" style="width:auto;padding:0 8px;font-size:.72rem;font-weight:600;">오늘</button>
         <div class="view-toggle">
           <button class="view-toggle-btn active" id="vt-month" onclick="setCalView('month')">월</button>
           <button class="view-toggle-btn" id="vt-week" onclick="setCalView('week')">주</button>
@@ -635,6 +743,13 @@ async function openActivityPanel(){
 function closeActivityPanel(){
   document.getElementById('activity-overlay').classList.remove('open');
   document.getElementById('activity-panel').classList.remove('open');
+}
+function openChangelog(){
+  closeActivityPanel();
+  document.getElementById('changelog-overlay').classList.add('open');
+}
+function closeChangelog(){
+  document.getElementById('changelog-overlay').classList.remove('open');
 }
 async function loadActivity(){
   const el=document.getElementById('activity-list');
@@ -1170,50 +1285,73 @@ function setCalView(v){
 function renderCalendar(){
   if(calView!=='month')return;
   document.getElementById('cal-title').textContent=`${calYear}년 ${calMonth+1}월`;
-  const first=new Date(calYear,calMonth,1),last=new Date(calYear,calMonth+1,0);
-  const startDay=first.getDay(),todayStr=toDateStr(now);
-  const vStart=new Date(calYear,calMonth,1),vEnd=new Date(calYear,calMonth+1,0,23,59);
+  const first=new Date(calYear,calMonth,1);
+  const startDay=first.getDay();
+  const todayStr=toDateStr(now);
+  // Build 42 cells with actual Date objects
+  const allDays=[];
+  for(let i=0;i<42;i++) allDays.push(new Date(calYear,calMonth,1-startDay+i));
+  // Get visible events across the whole calendar view
+  const vStart=allDays[0],vEnd=new Date(allDays[41].getFullYear(),allDays[41].getMonth(),allDays[41].getDate(),23,59);
   const evts=visibleEvents(vStart,vEnd,userFilter);
   let ft=userFilter==='all'?todos:todos.filter(t=>t.user_id==userFilter);
   if(searchQuery){
     evts.splice(0,evts.length,...evts.filter(e=>e.title.toLowerCase().includes(searchQuery)));
     ft=ft.filter(t=>t.title.toLowerCase().includes(searchQuery));
   }
-  const map={};
-  evts.forEach(e=>{
-    const startD=e.start_datetime.split('T')[0];
-    const endD=e.end_datetime?e.end_datetime.split('T')[0]:startD;
-    let cur=new Date(startD+'T12:00:00');
-    const endDate=new Date(endD+'T12:00:00');
-    while(cur<=endDate){
-      const ds=toDateStr(cur);
-      if(!map[ds])map[ds]=[];
-      if(!map[ds].some(x=>x.type==='event'&&x.data.id===e.id))
-        map[ds].push({type:'event',data:e,isStart:ds===startD,isEnd:ds===endD});
-      cur.setDate(cur.getDate()+1);
+  // Build todo map by date
+  const todoMap={};
+  ft.forEach(t=>{if(!t.due_date)return;if(!todoMap[t.due_date])todoMap[t.due_date]=[];todoMap[t.due_date].push(t);});
+  // Preprocess event date ranges
+  const evtRanges=evts.map(e=>({e,startD:e.start_datetime.split('T')[0],endD:e.end_datetime?e.end_datetime.split('T')[0]:e.start_datetime.split('T')[0]}));
+  const EH=20,DNH=26,GAP=2;
+  let weeksHtml='';
+  for(let w=0;w<6;w++){
+    const wDays=allDays.slice(w*7,(w+1)*7);
+    const ws=toDateStr(wDays[0]),we=toDateStr(wDays[6]);
+    // Events overlapping this week
+    const weekEvts=evtRanges.filter(({startD,endD})=>startD<=we&&endD>=ws);
+    // Sort by duration descending so longer events get lower lanes
+    weekEvts.sort((a,b)=>(new Date(b.endD)-new Date(b.startD))-(new Date(a.endD)-new Date(a.startD)));
+    // Lane assignment
+    const lanes=[];
+    const assignments=weekEvts.map(({e,startD,endD})=>{
+      const origStart=startD>=ws;
+      const origEnd=endD<=we;
+      const sc=origStart?wDays.findIndex(d=>toDateStr(d)===startD):0;
+      const ec=origEnd?wDays.findIndex(d=>toDateStr(d)===endD):6;
+      const safeS=sc<0?0:sc, safeE=ec<0?6:ec;
+      let lane=0;
+      while(lanes[lane]!==undefined&&lanes[lane]>=safeS)lane++;
+      lanes[lane]=safeE;
+      return {e,safeS,safeE,origStart,origEnd,lane};
+    });
+    const maxLanes=lanes.length||0;
+    const rowH=Math.max(72,DNH+maxLanes*EH+GAP*2);
+    // Day cells
+    let daysHtml='';
+    for(let i=0;i<7;i++){
+      const d=wDays[i],ds=toDateStr(d);
+      const isOther=d.getMonth()!==calMonth;
+      const hasTodo=!!(todoMap[ds]&&todoMap[ds].length);
+      daysHtml+=`<div class="cal-day${isOther?' other-month':''}${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" style="min-height:${rowH}px" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${d.getDate()}</span>${hasTodo?'<span class="cal-todo-dot"></span>':''}</div>`;
     }
-  });
-  ft.forEach(t=>{if(!t.due_date)return;if(!map[t.due_date])map[t.due_date]=[];map[t.due_date].push({type:'todo',data:t});});
-  let html='',dc=1;
-  const prev=new Date(calYear,calMonth,0).getDate();
-  for(let i=0;i<42;i++){
-    if(i<startDay){html+=`<div class="cal-day other-month"><span class="cal-day-num">${prev-startDay+i+1}</span></div>`;}
-    else if(dc>last.getDate()){html+=`<div class="cal-day other-month"><span class="cal-day-num">${dc++-last.getDate()}</span></div>`;}
-    else{
-      const ds=`${calYear}-${p2(calMonth+1)}-${p2(dc)}`;
-      const items=map[ds]||[];
-      const evtItems=items.filter(x=>x.type==='event');
-      const todoItems=items.filter(x=>x.type==='todo');
-      const MAX_BARS=2;
-      const bars=evtItems.slice(0,MAX_BARS).map(item=>`<div class="cal-bar" style="background:${item.data.color}" title="${esc(item.data.title)}">${esc(item.data.title)}</div>`).join('');
-      const extra=evtItems.length-MAX_BARS+todoItems.length;
-      const moreHtml=extra>0?`<div class="cal-more">+${extra}개</div>`:'';
-      const todoDots=todoItems.length&&evtItems.length<MAX_BARS?`<div class="cal-dot-wrap">${todoItems.slice(0,2).map(()=>`<div class="cal-dot" style="background:#94a3b8"></div>`).join('')}</div>`:'';
-      html+=`<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${dc}</span>${bars||moreHtml?`<div class="cal-bar-wrap">${bars}${moreHtml}</div>`:''}${todoDots}</div>`;
-      dc++;
-    }
+    // Event bars
+    let barsHtml='';
+    assignments.forEach(({e,safeS,safeE,origStart,origEnd,lane})=>{
+      const span=safeE-safeS+1;
+      const top=DNH+lane*EH+GAP;
+      const ml=origStart?GAP:0, mr=origEnd?GAP:0;
+      const br=`${origStart?'4px':'0'} ${origEnd?'4px':'0'} ${origEnd?'4px':'0'} ${origStart?'4px':'0'}`;
+      barsHtml+=`<div class="cal-evt-bar" style="top:${top}px;left:calc(${(safeS/7)*100}% + ${ml}px);width:calc(${(span/7)*100}% - ${ml+mr}px);background:${e.color};border-radius:${br}" title="${esc(e.title)}" onclick="event.stopPropagation();selectCalDay('${e.start_datetime.split('T')[0]}')">${esc(e.title)}</div>`;
+    });
+    weeksHtml+=`<div class="cal-week">${daysHtml}<div class="cal-events-overlay" style="height:${rowH}px">${barsHtml}</div></div>`;
   }
-  document.getElementById('cal-days').innerHTML=html;
+  document.getElementById('cal-days').innerHTML=weeksHtml;
+}
+function goToToday(){
+  calYear=now.getFullYear();calMonth=now.getMonth();
+  renderCalendar();
 }
 function selectCalDay(ds){selectedDay=ds;renderCalendar();renderSelectedDay();}
 function renderSelectedDay(){
