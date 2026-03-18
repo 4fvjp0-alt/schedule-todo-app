@@ -319,8 +319,9 @@ textarea{resize:vertical;min-height:65px;}
 body.dark .allday-badge{background:#0c4a6e;color:#7dd3fc;}
 
 /* ── Multi-day event bar in calendar ── */
-.cal-bar-wrap{display:flex;flex-direction:column;gap:1px;margin-top:1px;}
-.cal-bar{font-size:.58rem;font-weight:600;padding:1px 3px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;}
+.cal-bar-wrap{display:flex;flex-direction:column;gap:2px;margin-top:2px;padding:0 2px;}
+.cal-bar{display:block;font-size:.62rem;font-weight:600;padding:2px 5px;border-radius:4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;width:100%;box-sizing:border-box;}
+.cal-more{font-size:.6rem;color:var(--text-muted);padding:0 3px;font-weight:600;}
 
 /* ── Diary ── */
 .diary-card{padding:0;}
@@ -1203,9 +1204,12 @@ function renderCalendar(){
       const items=map[ds]||[];
       const evtItems=items.filter(x=>x.type==='event');
       const todoItems=items.filter(x=>x.type==='todo');
-      const bars=evtItems.slice(0,3).map(item=>`<div class="cal-bar" style="background:${item.data.color}">${item.isStart?esc(item.data.title.slice(0,8)):'&nbsp;'}</div>`).join('');
-      const dots=todoItems.slice(0,2).map(()=>`<div class="cal-dot" style="background:#94a3b8"></div>`).join('');
-      html+=`<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${dc}</span>${bars?`<div class="cal-bar-wrap">${bars}</div>`:''}${dots?`<div class="cal-dot-wrap">${dots}</div>`:''}</div>`;
+      const MAX_BARS=2;
+      const bars=evtItems.slice(0,MAX_BARS).map(item=>`<div class="cal-bar" style="background:${item.data.color}" title="${esc(item.data.title)}">${esc(item.data.title)}</div>`).join('');
+      const extra=evtItems.length-MAX_BARS+todoItems.length;
+      const moreHtml=extra>0?`<div class="cal-more">+${extra}개</div>`:'';
+      const todoDots=todoItems.length&&evtItems.length<MAX_BARS?`<div class="cal-dot-wrap">${todoItems.slice(0,2).map(()=>`<div class="cal-dot" style="background:#94a3b8"></div>`).join('')}</div>`:'';
+      html+=`<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${dc}</span>${bars||moreHtml?`<div class="cal-bar-wrap">${bars}${moreHtml}</div>`:''}${todoDots}</div>`;
       dc++;
     }
   }
