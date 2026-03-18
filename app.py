@@ -71,33 +71,33 @@ def init_db():
         cur.execute('''CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS todos (
             id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id),
             title TEXT NOT NULL, description TEXT DEFAULT '',
             completed INTEGER DEFAULT 0, priority TEXT DEFAULT 'medium',
             due_date TEXT DEFAULT '', tags TEXT DEFAULT '',
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS events (
             id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id),
             title TEXT NOT NULL, description TEXT DEFAULT '',
             start_datetime TEXT NOT NULL, end_datetime TEXT DEFAULT '',
             color TEXT DEFAULT '#4f8ef7', tags TEXT DEFAULT '',
             recurrence TEXT DEFAULT 'none',
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS comments (
             id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id),
             item_type TEXT NOT NULL, item_id INTEGER NOT NULL,
             content TEXT NOT NULL,
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS subtasks (
             id SERIAL PRIMARY KEY, todo_id INTEGER REFERENCES todos(id) ON DELETE CASCADE,
             title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS activity_log (
             id SERIAL PRIMARY KEY, user_id INTEGER, username TEXT,
             action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
-            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         # migrations
         for tbl in ('todos', 'events'):
             for col in ("ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
@@ -116,33 +116,33 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
             CREATE TABLE IF NOT EXISTS todos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id),
                 title TEXT NOT NULL, description TEXT DEFAULT '',
                 completed INTEGER DEFAULT 0, priority TEXT DEFAULT 'medium',
                 due_date TEXT DEFAULT '', tags TEXT DEFAULT '',
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id),
                 title TEXT NOT NULL, description TEXT DEFAULT '',
                 start_datetime TEXT NOT NULL, end_datetime TEXT DEFAULT '',
                 color TEXT DEFAULT '#4f8ef7', tags TEXT DEFAULT '',
                 recurrence TEXT DEFAULT 'none',
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
             CREATE TABLE IF NOT EXISTS comments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id),
                 item_type TEXT NOT NULL, item_id INTEGER NOT NULL,
                 content TEXT NOT NULL,
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
             CREATE TABLE IF NOT EXISTS subtasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, todo_id INTEGER REFERENCES todos(id),
                 title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
             CREATE TABLE IF NOT EXISTS activity_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT,
                 action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
-                created_at TEXT DEFAULT (datetime('now','localtime')));
+                created_at TEXT DEFAULT (datetime('now','+9 hours')));
         ''')
         for tbl in ('todos', 'events'):
             for col, default in (('user_id', 'INTEGER REFERENCES users(id)'),

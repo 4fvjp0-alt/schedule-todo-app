@@ -597,7 +597,9 @@ async function loadActivity(){
 }
 function relTime(dtStr){
   if(!dtStr)return '';
-  const d=new Date(dtStr);const diff=(Date.now()-d.getTime())/1000;
+  // DB stores KST (UTC+9). Append +09:00 so JS parses it correctly as KST.
+  const iso=dtStr.replace(' ','T')+'+09:00';
+  const d=new Date(iso);const diff=(Date.now()-d.getTime())/1000;
   if(isNaN(diff)||diff<0)return dtStr.slice(5,16);
   if(diff<60)return '방금 전';
   if(diff<3600)return `${Math.floor(diff/60)}분 전`;
