@@ -98,6 +98,11 @@ def init_db():
             id SERIAL PRIMARY KEY, user_id INTEGER, username TEXT,
             action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
             created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS diary (
+            id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id),
+            entry_date TEXT NOT NULL, title TEXT DEFAULT '', content TEXT NOT NULL,
+            created_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'),
+            updated_at TEXT DEFAULT to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS'))''')
         # migrations
         for tbl in ('todos', 'events'):
             for col in ("ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
@@ -106,10 +111,14 @@ def init_db():
                     cur.execute(f'ALTER TABLE {tbl} {col}')
                 except Exception:
                     pass
-        try:
-            cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence TEXT DEFAULT 'none'")
-        except Exception:
-            pass
+        for col_sql in (
+            "ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence TEXT DEFAULT 'none'",
+            "ALTER TABLE events ADD COLUMN IF NOT EXISTS all_day INTEGER DEFAULT 0",
+        ):
+            try:
+                cur.execute(col_sql)
+            except Exception:
+                pass
     else:
         cur = conn.cursor()
         cur.executescript('''
@@ -143,6 +152,11 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT,
                 action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
                 created_at TEXT DEFAULT (datetime('now','+9 hours')));
+            CREATE TABLE IF NOT EXISTS diary (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id),
+                entry_date TEXT NOT NULL, title TEXT DEFAULT '', content TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','+9 hours')),
+                updated_at TEXT DEFAULT (datetime('now','+9 hours')));
         ''')
         for tbl in ('todos', 'events'):
             for col, default in (('user_id', 'INTEGER REFERENCES users(id)'),
@@ -152,11 +166,15 @@ def init_db():
                     conn.commit()
                 except Exception:
                     pass
-        try:
-            cur.execute("ALTER TABLE events ADD COLUMN recurrence TEXT DEFAULT 'none'")
-            conn.commit()
-        except Exception:
-            pass
+        for col, default in (
+            ('recurrence', "TEXT DEFAULT 'none'"),
+            ('all_day', 'INTEGER DEFAULT 0'),
+        ):
+            try:
+                cur.execute(f'ALTER TABLE events ADD COLUMN {col} {default}')
+                conn.commit()
+            except Exception:
+                pass
     conn.commit()
     conn.close()
 
@@ -236,7 +254,7 @@ def seed_db():
 
     conn, driver = get_db()
     cur = conn.cursor()
-    for tbl in ('activity_log', 'comments', 'subtasks', 'todos', 'events', 'users'):
+    for tbl in ('activity_log', 'diary', 'comments', 'subtasks', 'todos', 'events', 'users'):
         cur.execute(f'DELETE FROM {tbl}')
     conn.commit()
     conn.close()
@@ -399,10 +417,10 @@ def get_events():
 def create_event():
     d = request.json
     new_id = insert(
-        'INSERT INTO events (user_id,title,description,start_datetime,end_datetime,color,tags,recurrence) VALUES (?,?,?,?,?,?,?,?)',
+        'INSERT INTO events (user_id,title,description,start_datetime,end_datetime,color,tags,recurrence,all_day) VALUES (?,?,?,?,?,?,?,?,?)',
         (current_user_id(), d['title'], d.get('description',''),
          d['start_datetime'], d.get('end_datetime',''), d.get('color','#4f8ef7'),
-         d.get('tags',''), d.get('recurrence','none')))
+         d.get('tags',''), d.get('recurrence','none'), d.get('all_day',0)))
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (new_id,), fetchone=True)
     log_activity('일정 추가', 'event', d['title'])
     return jsonify(row), 201
@@ -414,10 +432,10 @@ def update_event(event_id):
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
     d = request.json
-    query('UPDATE events SET title=?,description=?,start_datetime=?,end_datetime=?,color=?,tags=?,recurrence=? WHERE id=?',
+    query('UPDATE events SET title=?,description=?,start_datetime=?,end_datetime=?,color=?,tags=?,recurrence=?,all_day=? WHERE id=?',
           (d['title'], d.get('description',''), d['start_datetime'],
            d.get('end_datetime',''), d.get('color','#4f8ef7'), d.get('tags',''),
-           d.get('recurrence','none'), event_id), commit=True)
+           d.get('recurrence','none'), d.get('all_day',0), event_id), commit=True)
     log_activity('일정 수정', 'event', d['title'])
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (event_id,), fetchone=True)
     return jsonify(row)
@@ -479,6 +497,55 @@ def delete_comment(comment_id):
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
     query('DELETE FROM comments WHERE id=?', (comment_id,), commit=True)
+    return '', 204
+
+
+# ── Diary ─────────────────────────────────────────────────────────────────────
+
+DIARY_SELECT = '''SELECT d.*, u.username FROM diary d LEFT JOIN users u ON d.user_id=u.id'''
+
+@app.route('/api/diary', methods=['GET'])
+def get_diary():
+    rows, _ = query(f'{DIARY_SELECT} ORDER BY d.entry_date DESC, d.id DESC', fetchall=True)
+    return jsonify(rows or [])
+
+@app.route('/api/diary', methods=['POST'])
+@login_required
+def create_diary():
+    d = request.json
+    content = (d.get('content') or '').strip()
+    entry_date = d.get('entry_date') or ''
+    if not content or not entry_date:
+        return jsonify({'error': '날짜와 내용을 입력하세요'}), 400
+    new_id = insert(
+        'INSERT INTO diary (user_id, entry_date, title, content) VALUES (?,?,?,?)',
+        (current_user_id(), entry_date, d.get('title',''), content))
+    row, _ = query(f'{DIARY_SELECT} WHERE d.id=?', (new_id,), fetchone=True)
+    log_activity('일기 작성', 'diary', entry_date)
+    return jsonify(row), 201
+
+@app.route('/api/diary/<int:diary_id>', methods=['PUT'])
+@login_required
+def update_diary(diary_id):
+    owner, _ = query('SELECT user_id FROM diary WHERE id=?', (diary_id,), fetchone=True)
+    if not owner or owner['user_id'] != current_user_id():
+        return jsonify({'error': '권한이 없습니다'}), 403
+    d = request.json
+    kst_now = "to_char(NOW() AT TIME ZONE 'Asia/Seoul','YYYY-MM-DD HH24:MI:SS')" if DATABASE_URL else "datetime('now','+9 hours')"
+    query(f'UPDATE diary SET title=?, content=?, updated_at={kst_now} WHERE id=?',
+          (d.get('title',''), d.get('content',''), diary_id), commit=True)
+    row, _ = query(f'{DIARY_SELECT} WHERE d.id=?', (diary_id,), fetchone=True)
+    log_activity('일기 수정', 'diary', row.get('entry_date','') if row else '')
+    return jsonify(row)
+
+@app.route('/api/diary/<int:diary_id>', methods=['DELETE'])
+@login_required
+def delete_diary(diary_id):
+    owner, _ = query('SELECT user_id, entry_date FROM diary WHERE id=?', (diary_id,), fetchone=True)
+    if not owner or owner['user_id'] != current_user_id():
+        return jsonify({'error': '권한이 없습니다'}), 403
+    log_activity('일기 삭제', 'diary', owner.get('entry_date',''))
+    query('DELETE FROM diary WHERE id=?', (diary_id,), commit=True)
     return '', 204
 
 

@@ -308,7 +308,34 @@ textarea{resize:vertical;min-height:65px;}
 .toast-error{background:#ef4444;}
 .toast-info{background:#4f8ef7;}
 
-@media(max-width:480px){.form-row{grid-template-columns:1fr;}.cal-day{min-height:42px;}.stats-grid{grid-template-columns:repeat(2,1fr);}.week-head-day .wd-name{font-size:.6rem;}}
+@media(max-width:480px){.form-row{grid-template-columns:1fr;}.cal-day{min-height:42px;}.stats-grid{grid-template-columns:repeat(2,1fr);}.week-head-day .wd-name{font-size:.6rem;}
+  .btn-label{display:none;}.header-right{gap:3px;}.user-badge{font-size:.68rem;padding:3px 7px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.icon-btn{padding:5px 8px;font-size:.82rem;}}
+
+/* ── Btn label (hidden on mobile) ── */
+.btn-label{}
+
+/* ── All-day badge ── */
+.allday-badge{font-size:.63rem;font-weight:700;padding:1px 6px;border-radius:8px;background:#e0f2fe;color:#0369a1;margin-left:4px;}
+body.dark .allday-badge{background:#0c4a6e;color:#7dd3fc;}
+
+/* ── Multi-day event bar in calendar ── */
+.cal-bar-wrap{display:flex;flex-direction:column;gap:1px;margin-top:1px;}
+.cal-bar{font-size:.58rem;font-weight:600;padding:1px 3px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;}
+
+/* ── Diary ── */
+.diary-card{padding:0;}
+.diary-header-row{display:flex;align-items:center;gap:8px;padding:12px 13px 6px;}
+.diary-date-badge{font-size:.75rem;font-weight:700;color:var(--primary);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:3px 9px;}
+.diary-card-title{font-size:.92rem;font-weight:700;padding:0 13px 4px;word-break:break-word;}
+.diary-preview{font-size:.8rem;color:var(--text-muted);padding:0 13px 10px;white-space:pre-wrap;word-break:break-word;max-height:60px;overflow:hidden;}
+.diary-full-content{font-size:.82rem;color:var(--text);padding:0 13px 10px;white-space:pre-wrap;word-break:break-word;border-top:1px solid var(--border);padding-top:10px;display:none;}
+.diary-full-content.open{display:block;}
+.diary-expand-btn{width:100%;padding:6px 13px;background:transparent;border:none;border-top:1px solid var(--border);text-align:left;font-size:.74rem;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.diary-expand-btn:hover{background:var(--bg);}
+.diary-actions{display:flex;gap:4px;margin-left:auto;}
+.diary-empty{text-align:center;padding:48px 20px;color:var(--text-muted);font-size:.88rem;}
+.diary-textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:.88rem;color:var(--text);background:var(--input-bg);outline:none;resize:vertical;min-height:160px;font-family:inherit;line-height:1.6;}
+.diary-textarea:focus{border-color:var(--primary);}
 </style>
 </head>
 <body>
@@ -357,16 +384,17 @@ textarea{resize:vertical;min-height:65px;}
   </div>
   <div class="header-right">
     <span class="user-badge" id="header-username"></span>
-    <button class="icon-btn" onclick="openActivityPanel()" title="변경사항">📋 변경사항</button>
+    <button class="icon-btn" onclick="openActivityPanel()" title="변경사항">📋 <span class="btn-label">변경사항</span></button>
     <button class="icon-btn" id="dark-toggle" onclick="toggleDark()" title="다크모드">🌙</button>
     <button class="icon-btn" onclick="openPwModal()" title="비밀번호 변경">🔑</button>
-    <button class="icon-btn" onclick="doLogout()">로그아웃</button>
+    <button class="icon-btn" onclick="doLogout()" title="로그아웃">🚪 <span class="btn-label">로그아웃</span></button>
   </div>
 </header>
 
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('todos',this)">✅ 할일</button>
   <button class="tab-btn" onclick="switchTab('calendar',this)">📅 일정</button>
+  <button class="tab-btn" onclick="switchTab('diary',this)">📔 일기</button>
   <button class="tab-btn" onclick="switchTab('stats',this)">📊 통계</button>
 </div>
 
@@ -444,6 +472,12 @@ textarea{resize:vertical;min-height:65px;}
     </div>
   </div>
 
+  <!-- DIARY -->
+  <div id="tab-diary" class="tab-panel">
+    <button class="add-btn" onclick="openDiaryModal()">✍️ 일기 쓰기</button>
+    <div id="diary-list"></div>
+  </div>
+
   <!-- STATS -->
   <div id="tab-stats" class="tab-panel">
     <div id="stats-content"></div>
@@ -502,9 +536,17 @@ textarea{resize:vertical;min-height:65px;}
     </div>
     <div class="form-group"><label>제목 *</label><input type="text" id="event-title" placeholder="일정 제목을 입력하세요"></div>
     <div class="form-group"><label>설명</label><textarea id="event-desc" placeholder="상세 내용 (선택)"></textarea></div>
-    <div class="form-row">
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+      <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text);">
+        <input type="checkbox" id="event-allday" onchange="toggleAllDay(this.checked)" style="width:16px;height:16px;cursor:pointer;"> 하루종일
+      </label>
+    </div>
+    <div class="form-row" id="event-time-row">
       <div class="form-group"><label>시작</label><input type="datetime-local" id="event-start"></div>
       <div class="form-group"><label>종료</label><input type="datetime-local" id="event-end"></div>
+    </div>
+    <div class="form-row" id="event-date-row" style="display:none">
+      <div class="form-group"><label>날짜</label><input type="date" id="event-allday-date"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>반복</label>
@@ -512,6 +554,7 @@ textarea{resize:vertical;min-height:65px;}
           <option value="none">반복 없음</option>
           <option value="weekly">매주</option>
           <option value="monthly">매월</option>
+          <option value="yearly">매년</option>
         </select>
       </div>
       <div class="form-group"><label>색상</label>
@@ -531,6 +574,22 @@ textarea{resize:vertical;min-height:65px;}
   </div>
 </div>
 
+<!-- DIARY MODAL -->
+<div class="modal-overlay" id="diary-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="diary-modal-title">📔 일기 쓰기</span>
+      <button class="modal-close" onclick="closeDiaryModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>날짜 *</label><input type="date" id="diary-date"></div>
+      <div class="form-group"><label>제목 (선택)</label><input type="text" id="diary-title-input" placeholder="오늘의 제목..."></div>
+    </div>
+    <div class="form-group"><label>내용 *</label><textarea class="diary-textarea" id="diary-content" placeholder="오늘 하루를 기록하세요...&#10;&#10;어떤 일이 있었나요?"></textarea></div>
+    <button class="btn-submit" onclick="saveDiary()">저장</button>
+  </div>
+</div>
+
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const TAGS = [
@@ -542,9 +601,9 @@ function tagColor(name){return TAGS.find(t=>t.name===name)?.color||'#94a3b8';}
 const WEEK_START_HOUR=6, WEEK_END_HOUR=23, HOUR_H=48;
 
 // ── State ──────────────────────────────────────────────────────────────────
-let todos=[], events=[], currentUser=null;
+let todos=[], events=[], diaries=[], currentUser=null;
 let todoFilter='all', userFilter='all', tagFilter=null, searchQuery='', statsUserFilter='all';
-let editingTodoId=null, editingEventId=null;
+let editingTodoId=null, editingEventId=null, editingDiaryId=null;
 let selectedColor='#4f8ef7', selectedTodoTags=new Set(), selectedEventTags=new Set();
 let calYear, calMonth, selectedDay=null, calView='month';
 let calWeekOffset=0; // weeks from current week
@@ -563,8 +622,9 @@ const ACTION_ICONS = {
   '할일 추가':'➕','할일 수정':'✏️','할일 삭제':'🗑️','할일 완료':'✅','할일 완료 취소':'↩️',
   '일정 추가':'📅','일정 수정':'✏️','일정 삭제':'🗑️',
   '댓글 작성':'💬','서브태스크 추가':'📋',
+  '일기 작성':'📔','일기 수정':'✏️','일기 삭제':'🗑️',
 };
-const TYPE_LABEL = {todo:'할일', event:'일정', comment:'댓글', subtask:'서브태스크'};
+const TYPE_LABEL = {todo:'할일', event:'일정', comment:'댓글', subtask:'서브태스크', diary:'일기'};
 
 async function openActivityPanel(){
   document.getElementById('activity-overlay').classList.add('open');
@@ -660,9 +720,10 @@ function onLoggedIn(){
 async function checkSession(){const r=await fetch('/api/me');const d=await r.json();if(d){currentUser=d;onLoggedIn();}}
 
 // ── Data ───────────────────────────────────────────────────────────────────
-async function loadAll(){await Promise.all([loadTodos(),loadEvents()]);await loadUserFilter();}
+async function loadAll(){await Promise.all([loadTodos(),loadEvents(),loadDiary()]);await loadUserFilter();}
 async function loadTodos(){const r=await fetch('/api/todos');todos=await r.json();renderTodos();renderTagFilter();renderStats();}
 async function loadEvents(){const r=await fetch('/api/events');events=await r.json();renderCalendar();if(selectedDay)renderSelectedDay();renderStats();}
+async function loadDiary(){const r=await fetch('/api/diary');diaries=await r.json();renderDiary();}
 async function loadUserFilter(){
   const r=await fetch('/api/users');const users=await r.json();
   const bar=document.getElementById('user-filter-bar');
@@ -708,6 +769,7 @@ function switchTab(tab,btn){
   document.getElementById('tab-'+tab).classList.add('active');
   btn.classList.add('active');
   if(tab==='stats')renderStats();
+  if(tab==='diary')renderDiary();
 }
 
 // ── Tags helpers ───────────────────────────────────────────────────────────
@@ -1059,6 +1121,7 @@ function getOccurrences(event,viewStart,viewEnd){
     }
     if(rec==='weekly')cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+7,cur.getHours(),cur.getMinutes());
     else if(rec==='monthly')cur=new Date(cur.getFullYear(),cur.getMonth()+1,cur.getDate(),cur.getHours(),cur.getMinutes());
+    else if(rec==='yearly')cur=new Date(cur.getFullYear()+1,cur.getMonth(),cur.getDate(),cur.getHours(),cur.getMinutes());
     else break;
   }
   return occ;
@@ -1108,7 +1171,19 @@ function renderCalendar(){
     ft=ft.filter(t=>t.title.toLowerCase().includes(searchQuery));
   }
   const map={};
-  evts.forEach(e=>{const d=e.start_datetime.split('T')[0];if(!map[d])map[d]=[];map[d].push({type:'event',data:e});});
+  evts.forEach(e=>{
+    const startD=e.start_datetime.split('T')[0];
+    const endD=e.end_datetime?e.end_datetime.split('T')[0]:startD;
+    let cur=new Date(startD+'T12:00:00');
+    const endDate=new Date(endD+'T12:00:00');
+    while(cur<=endDate){
+      const ds=toDateStr(cur);
+      if(!map[ds])map[ds]=[];
+      if(!map[ds].some(x=>x.type==='event'&&x.data.id===e.id))
+        map[ds].push({type:'event',data:e,isStart:ds===startD,isEnd:ds===endD});
+      cur.setDate(cur.getDate()+1);
+    }
+  });
   ft.forEach(t=>{if(!t.due_date)return;if(!map[t.due_date])map[t.due_date]=[];map[t.due_date].push({type:'todo',data:t});});
   let html='',dc=1;
   const prev=new Date(calYear,calMonth,0).getDate();
@@ -1118,8 +1193,11 @@ function renderCalendar(){
     else{
       const ds=`${calYear}-${p2(calMonth+1)}-${p2(dc)}`;
       const items=map[ds]||[];
-      const dots=items.slice(0,4).map(item=>item.type==='event'?`<div class="cal-dot" style="background:${item.data.color}"></div>`:`<div class="cal-dot" style="background:#94a3b8"></div>`).join('');
-      html+=`<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${dc}</span><div class="cal-dot-wrap">${dots}</div></div>`;
+      const evtItems=items.filter(x=>x.type==='event');
+      const todoItems=items.filter(x=>x.type==='todo');
+      const bars=evtItems.slice(0,3).map(item=>`<div class="cal-bar" style="background:${item.data.color}">${item.isStart?esc(item.data.title.slice(0,8)):'&nbsp;'}</div>`).join('');
+      const dots=todoItems.slice(0,2).map(()=>`<div class="cal-dot" style="background:#94a3b8"></div>`).join('');
+      html+=`<div class="cal-day${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${dc}</span>${bars?`<div class="cal-bar-wrap">${bars}</div>`:''}${dots?`<div class="cal-dot-wrap">${dots}</div>`:''}</div>`;
       dc++;
     }
   }
@@ -1176,13 +1254,18 @@ function renderWeekView(){
   }).join('');
   document.getElementById('week-head').innerHTML=headGutter+headDays;
 
-  // All-day row (todos with due dates in this week)
+  // All-day row (todos + all-day events)
   let ft=userFilter==='all'?todos:todos.filter(t=>t.user_id==userFilter);
+  const allDayEvts=evts.filter(e=>e.all_day);
   const allDayGutter='<div class="week-allday-gutter">종일</div>';
   const allDayCols=days.map(d=>{
     const ds=toDateStr(d);
     const dayTodos=ft.filter(t=>t.due_date===ds);
-    const items=dayTodos.map(t=>`<div class="week-allday-item" style="background:#94a3b8" title="${esc(t.title)}" onclick="selectWeekDay('${ds}')">${esc(t.title)}</div>`).join('');
+    const dayAllDayEvts=allDayEvts.filter(e=>e.start_datetime.startsWith(ds));
+    const items=[
+      ...dayAllDayEvts.map(e=>`<div class="week-allday-item" style="background:${e.color}" title="${esc(e.title)}" onclick="selectWeekDay('${ds}')">${esc(e.title)}</div>`),
+      ...dayTodos.map(t=>`<div class="week-allday-item" style="background:#94a3b8" title="${esc(t.title)}" onclick="selectWeekDay('${ds}')">${esc(t.title)}</div>`)
+    ].join('');
     return `<div class="week-allday-col">${items}</div>`;
   }).join('');
   document.getElementById('week-allday').innerHTML=allDayGutter+allDayCols;
@@ -1203,7 +1286,7 @@ function renderWeekView(){
 
   const dayCols=days.map(d=>{
     const ds=toDateStr(d);
-    const dayEvts=byDay[ds]||[];
+    const dayEvts=(byDay[ds]||[]).filter(e=>!e.all_day);
     const lines=Array.from({length:WEEK_END_HOUR-WEEK_START_HOUR+1},()=>'<div class="week-hour-line"></div>').join('');
     const blocks=dayEvts.map(e=>{
       const [,tPart]=e.start_datetime.split('T');
@@ -1251,13 +1334,15 @@ function selectWeekDay(ds){
 function eventCard(e){
   const own=isOwn(e);const key=`event_${e.id}`;const isOpen=openComments.has(key);
   const rec=e.recurrence&&e.recurrence!=='none';
+  const recLabel={weekly:'매주',monthly:'매월',yearly:'매년'}[e.recurrence]||'';
+  const allDay=!!e.all_day;
   return `<div class="card" id="card-${key}">
     <div class="event-item">
       <div class="event-color-bar" style="background:${e.color}"></div>
       <div class="event-content">
         ${e.username?`<span class="owner-badge${own?' mine':''}">${own?'나':esc(e.username)}</span>`:''}
-        <div class="event-title">${esc(e.title)}${rec?`<span class="recurrence-badge">🔁 ${e.recurrence==='weekly'?'매주':'매월'}</span>`:''}</div>
-        <div class="event-time">${formatDatetime(e.start_datetime)}${e.end_datetime?' → '+formatDatetime(e.end_datetime):''}</div>
+        <div class="event-title">${esc(e.title)}${rec?`<span class="recurrence-badge">🔁 ${recLabel}</span>`:''}${allDay?'<span class="allday-badge">종일</span>':''}</div>
+        <div class="event-time">${allDay?e.start_datetime.slice(0,10):formatDatetime(e.start_datetime)}${!allDay&&e.end_datetime?' → '+formatDatetime(e.end_datetime):''}</div>
         ${e.description?`<div class="event-desc">${esc(e.description)}</div>`:''}
         ${tagsHtml(e.tags)}
       </div>
@@ -1279,8 +1364,15 @@ function openEventModal(e=null){
   document.getElementById('event-title').value=e?e.title:'';
   document.getElementById('event-desc').value=e?e.description:'';
   const def=selectedDay?`${selectedDay}T09:00`:new Date().toISOString().slice(0,16);
-  document.getElementById('event-start').value=e?e.start_datetime.slice(0,16):def;
-  document.getElementById('event-end').value=e&&e.end_datetime?e.end_datetime.slice(0,16):'';
+  const allDay=e?!!e.all_day:false;
+  document.getElementById('event-allday').checked=allDay;
+  toggleAllDay(allDay);
+  if(allDay){
+    document.getElementById('event-allday-date').value=e.start_datetime.slice(0,10);
+  }else{
+    document.getElementById('event-start').value=e?e.start_datetime.slice(0,16):def;
+    document.getElementById('event-end').value=e&&e.end_datetime?e.end_datetime.slice(0,16):'';
+  }
   document.getElementById('event-recurrence').value=e?e.recurrence||'none':'none';
   selectedColor=e?e.color:'#4f8ef7';
   document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('selected',el.dataset.color===selectedColor));
@@ -1301,10 +1393,19 @@ function selectColor(el){document.querySelectorAll('.color-opt').forEach(x=>x.cl
 async function saveEvent(){
   const title=document.getElementById('event-title').value.trim();
   if(!title){alert('제목을 입력하세요');return;}
-  const start=document.getElementById('event-start').value;
-  if(!start){alert('시작 시간을 입력하세요');return;}
+  const allDay=document.getElementById('event-allday').checked?1:0;
+  let start,end;
+  if(allDay){
+    const date=document.getElementById('event-allday-date').value;
+    if(!date){alert('날짜를 입력하세요');return;}
+    start=date+'T00:00';end=date+'T23:59';
+  }else{
+    start=document.getElementById('event-start').value;
+    if(!start){alert('시작 시간을 입력하세요');return;}
+    end=document.getElementById('event-end').value||'';
+  }
   const data={title,description:document.getElementById('event-desc').value.trim(),
-    start_datetime:start,end_datetime:document.getElementById('event-end').value||'',
+    start_datetime:start,end_datetime:end,all_day:allDay,
     color:selectedColor,tags:[...selectedEventTags].join(','),
     recurrence:document.getElementById('event-recurrence').value};
   const isEdit=!!editingEventId;
@@ -1427,6 +1528,102 @@ async function changePassword(){
   closePwModal();showToast('🔑 비밀번호가 변경되었습니다','success');
 }
 document.getElementById('pw-confirm').addEventListener('keydown',e=>{if(e.key==='Enter')changePassword();});
+
+// ── All-day toggle ─────────────────────────────────────────────────────────
+function toggleAllDay(checked){
+  document.getElementById('event-time-row').style.display=checked?'none':'';
+  document.getElementById('event-date-row').style.display=checked?'':'none';
+}
+
+// ── Diary ──────────────────────────────────────────────────────────────────
+function renderDiary(){
+  const el=document.getElementById('diary-list');
+  if(!el)return;
+  if(!diaries.length){el.innerHTML='<div class="diary-empty">📔 아직 일기가 없습니다.<br>오늘 하루를 기록해보세요!</div>';return;}
+  // Group by entry_date
+  const groups={};
+  diaries.forEach(d=>{if(!groups[d.entry_date])groups[d.entry_date]=[];groups[d.entry_date].push(d);});
+  el.innerHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+    const [y,m,d]=date.split('-');
+    const dayNames=['일','월','화','수','목','금','토'];
+    const dow=dayNames[new Date(date+'T12:00:00').getDay()];
+    return `<div style="margin-bottom:4px;padding:6px 4px 2px;font-size:.75rem;font-weight:700;color:var(--text-muted)">${y}년 ${m}월 ${d}일 (${dow})</div>`+
+      groups[date].map(entry=>diaryCard(entry)).join('');
+  }).join('');
+}
+
+function diaryCard(entry){
+  const own=currentUser&&entry.user_id===currentUser.id;
+  const key=`diary_${entry.id}`;
+  const isOpen=openComments.has(key);
+  const cached=commentCache[key];
+  const expanded=openDiaryEntries.has(entry.id);
+  const preview=(entry.content||'').slice(0,80)+(entry.content&&entry.content.length>80?'...':'');
+  return `<div class="card diary-card" id="card-${key}">
+    <div class="diary-header-row">
+      <span class="diary-date-badge">📔 ${entry.entry_date}</span>
+      ${entry.username?`<span class="owner-badge${own?' mine':''}" style="margin-bottom:0">${own?'나':esc(entry.username)}</span>`:''}
+      <div class="diary-actions">
+        ${own?`<button class="btn-icon btn-edit" onclick="editDiary(${entry.id})">✏️</button>
+        <button class="btn-icon btn-delete" onclick="deleteDiary(${entry.id})">🗑️</button>`:''}
+      </div>
+    </div>
+    ${entry.title?`<div class="diary-card-title">${esc(entry.title)}</div>`:''}
+    <div class="diary-preview">${esc(preview)}</div>
+    ${(entry.content||'').length>80?`<div class="diary-full-content${expanded?' open':''}" id="df-${entry.id}">${esc(entry.content)}</div>
+    <button class="diary-expand-btn" id="deb-${entry.id}" onclick="toggleDiaryExpand(${entry.id})">${expanded?'▲ 접기':'▼ 더 보기'}</button>`:''}
+    <button class="comment-toggle" onclick="toggleComments('${key}')">💬 댓글 달기</button>
+    <div class="comment-section${isOpen?' open':''}" id="cs-${key}">
+      ${isOpen&&cached?renderCommentsHtml(cached,key):''}
+    </div>
+  </div>`;
+}
+
+const openDiaryEntries=new Set();
+function toggleDiaryExpand(id){
+  const fc=document.getElementById(`df-${id}`);
+  const btn=document.getElementById(`deb-${id}`);
+  if(!fc||!btn)return;
+  const willOpen=!fc.classList.contains('open');
+  fc.classList.toggle('open',willOpen);
+  if(willOpen)openDiaryEntries.add(id);else openDiaryEntries.delete(id);
+  btn.textContent=willOpen?'▲ 접기':'▼ 더 보기';
+}
+
+function openDiaryModal(entry=null){
+  editingDiaryId=entry?entry.id:null;
+  document.getElementById('diary-modal-title').textContent=entry?'📔 일기 수정':'📔 일기 쓰기';
+  const todayStr=toDateStr(now);
+  document.getElementById('diary-date').value=entry?entry.entry_date:todayStr;
+  document.getElementById('diary-title-input').value=entry?entry.title:'';
+  document.getElementById('diary-content').value=entry?entry.content:'';
+  document.getElementById('diary-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('diary-content').focus(),300);
+}
+function closeDiaryModal(){document.getElementById('diary-modal').classList.remove('open');}
+function editDiary(id){const e=diaries.find(x=>x.id===id);if(e&&currentUser&&e.user_id===currentUser.id)openDiaryModal(e);}
+async function deleteDiary(id){
+  if(!confirm('일기를 삭제하시겠습니까?'))return;
+  await fetch(`/api/diary/${id}`,{method:'DELETE'});
+  delete commentCache[`diary_${id}`];openDiaryEntries.delete(id);
+  showToast('🗑️ 일기가 삭제되었습니다','error');
+  await loadDiary();
+}
+async function saveDiary(){
+  const entry_date=document.getElementById('diary-date').value;
+  const content=document.getElementById('diary-content').value.trim();
+  if(!entry_date||!content){alert('날짜와 내용을 입력하세요');return;}
+  const data={entry_date,title:document.getElementById('diary-title-input').value.trim(),content};
+  const isEdit=!!editingDiaryId;
+  if(isEdit){
+    await fetch(`/api/diary/${editingDiaryId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  }else{
+    await fetch('/api/diary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  }
+  closeDiaryModal();
+  showToast(isEdit?'✏️ 일기가 수정되었습니다':'📔 일기가 저장되었습니다','success');
+  await loadDiary();
+}
 
 checkSession();
 </script>
