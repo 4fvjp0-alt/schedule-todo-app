@@ -281,6 +281,26 @@ textarea{resize:vertical;min-height:65px;}
 .modal-subtask-item:last-child{border-bottom:none;}
 .modal-subtask-text{flex:1;font-size:.82rem;}
 
+/* ── Activity panel ── */
+.activity-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;}
+.activity-overlay.open{display:block;}
+.activity-panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100vw);background:var(--card);box-shadow:-4px 0 24px rgba(0,0,0,.15);z-index:301;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;}
+.activity-panel.open{transform:translateX(0);}
+.activity-panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.activity-panel-title{font-size:1rem;font-weight:700;}
+.activity-panel-close{width:30px;height:30px;border:none;background:var(--bg);border-radius:8px;font-size:1rem;cursor:pointer;color:var(--text-muted);}
+.activity-list{flex:1;overflow-y:auto;padding:8px 0;}
+.activity-item{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+.activity-item:last-child{border-bottom:none;}
+.activity-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.activity-body{flex:1;min-width:0;}
+.activity-who{font-size:.8rem;font-weight:700;color:var(--text);}
+.activity-action{font-size:.8rem;color:var(--text-muted);font-weight:400;}
+.activity-item-title{font-size:.8rem;color:var(--text);font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.activity-time{font-size:.68rem;color:var(--text-muted);margin-top:3px;}
+.activity-type-icon{font-size:.75rem;margin-right:2px;}
+.activity-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:.86rem;}
+
 /* ── Toast ── */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);padding:10px 22px;border-radius:24px;font-size:.85rem;font-weight:600;color:#fff;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;max-width:88vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -292,6 +312,18 @@ textarea{resize:vertical;min-height:65px;}
 </style>
 </head>
 <body>
+
+<!-- Activity panel -->
+<div class="activity-overlay" id="activity-overlay" onclick="closeActivityPanel()"></div>
+<div class="activity-panel" id="activity-panel">
+  <div class="activity-panel-header">
+    <span class="activity-panel-title">📋 변경사항</span>
+    <button class="activity-panel-close" onclick="closeActivityPanel()">✕</button>
+  </div>
+  <div class="activity-list" id="activity-list">
+    <div class="activity-empty">불러오는 중...</div>
+  </div>
+</div>
 
 <!-- Auth -->
 <div id="auth-screen">
@@ -325,6 +357,7 @@ textarea{resize:vertical;min-height:65px;}
   </div>
   <div class="header-right">
     <span class="user-badge" id="header-username"></span>
+    <button class="icon-btn" onclick="openActivityPanel()" title="변경사항">📋 변경사항</button>
     <button class="icon-btn" id="dark-toggle" onclick="toggleDark()" title="다크모드">🌙</button>
     <button class="icon-btn" onclick="openPwModal()" title="비밀번호 변경">🔑</button>
     <button class="icon-btn" onclick="doLogout()">로그아웃</button>
@@ -524,6 +557,54 @@ calYear=now.getFullYear(); calMonth=now.getMonth();
 
 document.getElementById('today-str').textContent=
   now.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// ── Activity panel ────────────────────────────────────────────────────────
+const ACTION_ICONS = {
+  '할일 추가':'➕','할일 수정':'✏️','할일 삭제':'🗑️','할일 완료':'✅','할일 완료 취소':'↩️',
+  '일정 추가':'📅','일정 수정':'✏️','일정 삭제':'🗑️',
+  '댓글 작성':'💬','서브태스크 추가':'📋',
+};
+const TYPE_LABEL = {todo:'할일', event:'일정', comment:'댓글', subtask:'서브태스크'};
+
+async function openActivityPanel(){
+  document.getElementById('activity-overlay').classList.add('open');
+  document.getElementById('activity-panel').classList.add('open');
+  await loadActivity();
+}
+function closeActivityPanel(){
+  document.getElementById('activity-overlay').classList.remove('open');
+  document.getElementById('activity-panel').classList.remove('open');
+}
+async function loadActivity(){
+  const el=document.getElementById('activity-list');
+  el.innerHTML='<div class="activity-empty">불러오는 중...</div>';
+  const r=await fetch('/api/activity');
+  const items=await r.json();
+  if(!items.length){el.innerHTML='<div class="activity-empty">변경사항이 없습니다</div>';return;}
+  el.innerHTML=items.map(item=>{
+    const icon=ACTION_ICONS[item.action]||'🔔';
+    const avatar=(item.username||'?')[0].toUpperCase();
+    const timeStr=relTime(item.created_at);
+    return `<div class="activity-item">
+      <div class="activity-avatar">${avatar}</div>
+      <div class="activity-body">
+        <div><span class="activity-who">${esc(item.username||'알 수 없음')}</span> <span class="activity-action">${icon} ${esc(item.action)}</span></div>
+        ${item.item_title?`<div class="activity-item-title">"${esc(item.item_title)}"</div>`:''}
+        <div class="activity-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function relTime(dtStr){
+  if(!dtStr)return '';
+  const d=new Date(dtStr);const diff=(Date.now()-d.getTime())/1000;
+  if(isNaN(diff)||diff<0)return dtStr.slice(5,16);
+  if(diff<60)return '방금 전';
+  if(diff<3600)return `${Math.floor(diff/60)}분 전`;
+  if(diff<86400)return `${Math.floor(diff/3600)}시간 전`;
+  if(diff<86400*30)return `${Math.floor(diff/86400)}일 전`;
+  return dtStr.slice(0,10);
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 function showToast(msg,type='success'){

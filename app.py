@@ -94,6 +94,10 @@ def init_db():
             id SERIAL PRIMARY KEY, todo_id INTEGER REFERENCES todos(id) ON DELETE CASCADE,
             title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
             created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS activity_log (
+            id SERIAL PRIMARY KEY, user_id INTEGER, username TEXT,
+            action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
+            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
         # migrations
         for tbl in ('todos', 'events'):
             for col in ("ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
@@ -135,6 +139,10 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT, todo_id INTEGER REFERENCES todos(id),
                 title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT (datetime('now','localtime')));
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT,
+                action TEXT NOT NULL, item_type TEXT DEFAULT '', item_title TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now','localtime')));
         ''')
         for tbl in ('todos', 'events'):
             for col, default in (('user_id', 'INTEGER REFERENCES users(id)'),
@@ -165,6 +173,13 @@ def login_required(f):
 
 def current_user_id():
     return session.get('user_id')
+
+def log_activity(action, item_type='', item_title=''):
+    try:
+        insert('INSERT INTO activity_log (user_id, username, action, item_type, item_title) VALUES (?,?,?,?,?)',
+               (session.get('user_id'), session.get('username'), action, item_type, (item_title or '')[:80]))
+    except Exception:
+        pass
 
 @app.route('/')
 def index():
@@ -221,7 +236,7 @@ def seed_db():
 
     conn, driver = get_db()
     cur = conn.cursor()
-    for tbl in ('comments', 'subtasks', 'todos', 'events', 'users'):
+    for tbl in ('activity_log', 'comments', 'subtasks', 'todos', 'events', 'users'):
         cur.execute(f'DELETE FROM {tbl}')
     conn.commit()
     conn.close()
@@ -279,27 +294,35 @@ def create_todo():
         (current_user_id(), d['title'], d.get('description',''),
          d.get('priority','medium'), d.get('due_date',''), d.get('tags','')))
     row, _ = query(f'{TODO_SELECT} WHERE t.id=?', (new_id,), fetchone=True)
+    log_activity('할일 추가', 'todo', d['title'])
     return jsonify(row), 201
 
 @app.route('/api/todos/<int:todo_id>', methods=['PUT'])
 @login_required
 def update_todo(todo_id):
-    owner, _ = query('SELECT user_id FROM todos WHERE id=?', (todo_id,), fetchone=True)
+    owner, _ = query('SELECT user_id, completed FROM todos WHERE id=?', (todo_id,), fetchone=True)
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
     d = request.json
+    old_completed = owner.get('completed', 0)
+    new_completed = d.get('completed', 0)
     query('UPDATE todos SET title=?,description=?,completed=?,priority=?,due_date=?,tags=? WHERE id=?',
-          (d['title'], d.get('description',''), d.get('completed',0),
+          (d['title'], d.get('description',''), new_completed,
            d.get('priority','medium'), d.get('due_date',''), d.get('tags',''), todo_id), commit=True)
+    if old_completed != new_completed:
+        log_activity('할일 완료' if new_completed else '할일 완료 취소', 'todo', d['title'])
+    else:
+        log_activity('할일 수정', 'todo', d['title'])
     row, _ = query(f'{TODO_SELECT} WHERE t.id=?', (todo_id,), fetchone=True)
     return jsonify(row)
 
 @app.route('/api/todos/<int:todo_id>', methods=['DELETE'])
 @login_required
 def delete_todo(todo_id):
-    owner, _ = query('SELECT user_id FROM todos WHERE id=?', (todo_id,), fetchone=True)
+    owner, _ = query('SELECT user_id, title FROM todos WHERE id=?', (todo_id,), fetchone=True)
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
+    log_activity('할일 삭제', 'todo', owner.get('title',''))
     query('DELETE FROM subtasks WHERE todo_id=?', (todo_id,), commit=True)
     query('DELETE FROM comments WHERE item_type=? AND item_id=?', ('todo', todo_id), commit=True)
     query('DELETE FROM todos WHERE id=?', (todo_id,), commit=True)
@@ -331,6 +354,7 @@ def create_subtask():
     new_id = insert('INSERT INTO subtasks (todo_id, title, sort_order) VALUES (?,?,?)',
                     (todo_id, title, (mo or {}).get('mo', 0) + 1))
     row, _ = query('SELECT * FROM subtasks WHERE id=?', (new_id,), fetchone=True)
+    log_activity('서브태스크 추가', 'subtask', title)
     return jsonify(row), 201
 
 @app.route('/api/subtasks/<int:subtask_id>', methods=['PUT'])
@@ -380,6 +404,7 @@ def create_event():
          d['start_datetime'], d.get('end_datetime',''), d.get('color','#4f8ef7'),
          d.get('tags',''), d.get('recurrence','none')))
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (new_id,), fetchone=True)
+    log_activity('일정 추가', 'event', d['title'])
     return jsonify(row), 201
 
 @app.route('/api/events/<int:event_id>', methods=['PUT'])
@@ -393,18 +418,30 @@ def update_event(event_id):
           (d['title'], d.get('description',''), d['start_datetime'],
            d.get('end_datetime',''), d.get('color','#4f8ef7'), d.get('tags',''),
            d.get('recurrence','none'), event_id), commit=True)
+    log_activity('일정 수정', 'event', d['title'])
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (event_id,), fetchone=True)
     return jsonify(row)
 
 @app.route('/api/events/<int:event_id>', methods=['DELETE'])
 @login_required
 def delete_event(event_id):
-    owner, _ = query('SELECT user_id FROM events WHERE id=?', (event_id,), fetchone=True)
+    owner, _ = query('SELECT user_id, title FROM events WHERE id=?', (event_id,), fetchone=True)
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
+    log_activity('일정 삭제', 'event', owner.get('title',''))
     query('DELETE FROM comments WHERE item_type=? AND item_id=?', ('event', event_id), commit=True)
     query('DELETE FROM events WHERE id=?', (event_id,), commit=True)
     return '', 204
+
+
+# ── Activity log ──────────────────────────────────────────────────────────────
+
+@app.route('/api/activity')
+def get_activity():
+    rows, _ = query(
+        'SELECT * FROM activity_log ORDER BY id DESC LIMIT 100',
+        fetchall=True)
+    return jsonify(rows or [])
 
 
 # ── Comments ──────────────────────────────────────────────────────────────────
@@ -432,6 +469,7 @@ def create_comment():
     row, _ = query(
         'SELECT c.*, u.username FROM comments c LEFT JOIN users u ON c.user_id=u.id WHERE c.id=?',
         (new_id,), fetchone=True)
+    log_activity('댓글 작성', d['item_type'], (content[:40]+'…') if len(content)>40 else content)
     return jsonify(row), 201
 
 @app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
