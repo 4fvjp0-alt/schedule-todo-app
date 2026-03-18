@@ -66,7 +66,6 @@ def insert(sql, params=()):
 def init_db():
     conn, driver = get_db()
     if driver == 'pg':
-        # autocommit 모드: 각 DDL이 독립 트랜잭션 → rollback 오염 없음
         conn.autocommit = True
         cur = conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -84,20 +83,29 @@ def init_db():
             title TEXT NOT NULL, description TEXT DEFAULT '',
             start_datetime TEXT NOT NULL, end_datetime TEXT DEFAULT '',
             color TEXT DEFAULT '#4f8ef7', tags TEXT DEFAULT '',
+            recurrence TEXT DEFAULT 'none',
             created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
         cur.execute('''CREATE TABLE IF NOT EXISTS comments (
             id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id),
             item_type TEXT NOT NULL, item_id INTEGER NOT NULL,
             content TEXT NOT NULL,
             created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
-        # 기존 테이블 마이그레이션 (컬럼 없을 때만 추가)
+        cur.execute('''CREATE TABLE IF NOT EXISTS subtasks (
+            id SERIAL PRIMARY KEY, todo_id INTEGER REFERENCES todos(id) ON DELETE CASCADE,
+            title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT to_char(NOW(),'YYYY-MM-DD HH24:MI:SS'))''')
+        # migrations
         for tbl in ('todos', 'events'):
             for col in ("ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)",
                         "ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT ''"):
                 try:
                     cur.execute(f'ALTER TABLE {tbl} {col}')
                 except Exception:
-                    pass  # 이미 존재하면 무시
+                    pass
+        try:
+            cur.execute("ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence TEXT DEFAULT 'none'")
+        except Exception:
+            pass
     else:
         cur = conn.cursor()
         cur.executescript('''
@@ -116,11 +124,16 @@ def init_db():
                 title TEXT NOT NULL, description TEXT DEFAULT '',
                 start_datetime TEXT NOT NULL, end_datetime TEXT DEFAULT '',
                 color TEXT DEFAULT '#4f8ef7', tags TEXT DEFAULT '',
+                recurrence TEXT DEFAULT 'none',
                 created_at TEXT DEFAULT (datetime('now','localtime')));
             CREATE TABLE IF NOT EXISTS comments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id),
                 item_type TEXT NOT NULL, item_id INTEGER NOT NULL,
                 content TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','localtime')));
+            CREATE TABLE IF NOT EXISTS subtasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, todo_id INTEGER REFERENCES todos(id),
+                title TEXT NOT NULL, completed INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT (datetime('now','localtime')));
         ''')
         for tbl in ('todos', 'events'):
@@ -131,6 +144,11 @@ def init_db():
                     conn.commit()
                 except Exception:
                     pass
+        try:
+            cur.execute("ALTER TABLE events ADD COLUMN recurrence TEXT DEFAULT 'none'")
+            conn.commit()
+        except Exception:
+            pass
     conn.commit()
     conn.close()
 
@@ -203,12 +221,11 @@ def seed_db():
 
     conn, driver = get_db()
     cur = conn.cursor()
-    for tbl in ('comments', 'todos', 'events', 'users'):
+    for tbl in ('comments', 'subtasks', 'todos', 'events', 'users'):
         cur.execute(f'DELETE FROM {tbl}')
     conn.commit()
     conn.close()
 
-    from werkzeug.security import generate_password_hash
     for username, password in [('혜수', '1234'), ('상현', '1234')]:
         insert('INSERT INTO users (username, password_hash) VALUES (?,?)',
                (username, generate_password_hash(password)))
@@ -243,7 +260,9 @@ def get_users():
 # ── Todos ─────────────────────────────────────────────────────────────────────
 
 TODO_SELECT = '''SELECT t.*, u.username,
-    (SELECT COUNT(*) FROM comments WHERE item_type='todo' AND item_id=t.id) AS comment_count
+    (SELECT COUNT(*) FROM comments WHERE item_type='todo' AND item_id=t.id) AS comment_count,
+    (SELECT COUNT(*) FROM subtasks WHERE todo_id=t.id) AS subtask_count,
+    (SELECT COUNT(*) FROM subtasks WHERE todo_id=t.id AND completed=1) AS subtask_done
     FROM todos t LEFT JOIN users u ON t.user_id=u.id'''
 
 @app.route('/api/todos', methods=['GET'])
@@ -281,8 +300,62 @@ def delete_todo(todo_id):
     owner, _ = query('SELECT user_id FROM todos WHERE id=?', (todo_id,), fetchone=True)
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
+    query('DELETE FROM subtasks WHERE todo_id=?', (todo_id,), commit=True)
     query('DELETE FROM comments WHERE item_type=? AND item_id=?', ('todo', todo_id), commit=True)
     query('DELETE FROM todos WHERE id=?', (todo_id,), commit=True)
+    return '', 204
+
+
+# ── Subtasks ──────────────────────────────────────────────────────────────────
+
+@app.route('/api/subtasks', methods=['GET'])
+def get_subtasks():
+    todo_id = request.args.get('todo_id')
+    rows, _ = query('SELECT * FROM subtasks WHERE todo_id=? ORDER BY sort_order ASC, id ASC',
+                    (todo_id,), fetchall=True)
+    return jsonify(rows or [])
+
+@app.route('/api/subtasks', methods=['POST'])
+@login_required
+def create_subtask():
+    d = request.json
+    todo_id = d.get('todo_id')
+    title = (d.get('title') or '').strip()
+    if not title or not todo_id:
+        return jsonify({'error': '내용을 입력하세요'}), 400
+    todo, _ = query('SELECT user_id FROM todos WHERE id=?', (todo_id,), fetchone=True)
+    if not todo or todo['user_id'] != current_user_id():
+        return jsonify({'error': '권한이 없습니다'}), 403
+    mo, _ = query('SELECT COALESCE(MAX(sort_order),0) AS mo FROM subtasks WHERE todo_id=?',
+                  (todo_id,), fetchone=True)
+    new_id = insert('INSERT INTO subtasks (todo_id, title, sort_order) VALUES (?,?,?)',
+                    (todo_id, title, (mo or {}).get('mo', 0) + 1))
+    row, _ = query('SELECT * FROM subtasks WHERE id=?', (new_id,), fetchone=True)
+    return jsonify(row), 201
+
+@app.route('/api/subtasks/<int:subtask_id>', methods=['PUT'])
+@login_required
+def update_subtask(subtask_id):
+    st, _ = query(
+        'SELECT s.*, t.user_id FROM subtasks s JOIN todos t ON s.todo_id=t.id WHERE s.id=?',
+        (subtask_id,), fetchone=True)
+    if not st or st['user_id'] != current_user_id():
+        return jsonify({'error': '권한이 없습니다'}), 403
+    d = request.json
+    query('UPDATE subtasks SET completed=? WHERE id=?',
+          (d.get('completed', st['completed']), subtask_id), commit=True)
+    row, _ = query('SELECT * FROM subtasks WHERE id=?', (subtask_id,), fetchone=True)
+    return jsonify(row)
+
+@app.route('/api/subtasks/<int:subtask_id>', methods=['DELETE'])
+@login_required
+def delete_subtask(subtask_id):
+    st, _ = query(
+        'SELECT s.*, t.user_id FROM subtasks s JOIN todos t ON s.todo_id=t.id WHERE s.id=?',
+        (subtask_id,), fetchone=True)
+    if not st or st['user_id'] != current_user_id():
+        return jsonify({'error': '권한이 없습니다'}), 403
+    query('DELETE FROM subtasks WHERE id=?', (subtask_id,), commit=True)
     return '', 204
 
 
@@ -302,9 +375,10 @@ def get_events():
 def create_event():
     d = request.json
     new_id = insert(
-        'INSERT INTO events (user_id,title,description,start_datetime,end_datetime,color,tags) VALUES (?,?,?,?,?,?,?)',
+        'INSERT INTO events (user_id,title,description,start_datetime,end_datetime,color,tags,recurrence) VALUES (?,?,?,?,?,?,?,?)',
         (current_user_id(), d['title'], d.get('description',''),
-         d['start_datetime'], d.get('end_datetime',''), d.get('color','#4f8ef7'), d.get('tags','')))
+         d['start_datetime'], d.get('end_datetime',''), d.get('color','#4f8ef7'),
+         d.get('tags',''), d.get('recurrence','none')))
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (new_id,), fetchone=True)
     return jsonify(row), 201
 
@@ -315,9 +389,10 @@ def update_event(event_id):
     if not owner or owner['user_id'] != current_user_id():
         return jsonify({'error': '권한이 없습니다'}), 403
     d = request.json
-    query('UPDATE events SET title=?,description=?,start_datetime=?,end_datetime=?,color=?,tags=? WHERE id=?',
+    query('UPDATE events SET title=?,description=?,start_datetime=?,end_datetime=?,color=?,tags=?,recurrence=? WHERE id=?',
           (d['title'], d.get('description',''), d['start_datetime'],
-           d.get('end_datetime',''), d.get('color','#4f8ef7'), d.get('tags',''), event_id), commit=True)
+           d.get('end_datetime',''), d.get('color','#4f8ef7'), d.get('tags',''),
+           d.get('recurrence','none'), event_id), commit=True)
     row, _ = query(f'{EVENT_SELECT} WHERE e.id=?', (event_id,), fetchone=True)
     return jsonify(row)
 
