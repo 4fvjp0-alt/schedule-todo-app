@@ -1288,10 +1288,8 @@ function renderCalendar(){
   const first=new Date(calYear,calMonth,1);
   const startDay=first.getDay();
   const todayStr=toDateStr(now);
-  // Build 42 cells with actual Date objects
   const allDays=[];
   for(let i=0;i<42;i++) allDays.push(new Date(calYear,calMonth,1-startDay+i));
-  // Get visible events across the whole calendar view
   const vStart=allDays[0],vEnd=new Date(allDays[41].getFullYear(),allDays[41].getMonth(),allDays[41].getDate(),23,59);
   const evts=visibleEvents(vStart,vEnd,userFilter);
   let ft=userFilter==='all'?todos:todos.filter(t=>t.user_id==userFilter);
@@ -1299,51 +1297,54 @@ function renderCalendar(){
     evts.splice(0,evts.length,...evts.filter(e=>e.title.toLowerCase().includes(searchQuery)));
     ft=ft.filter(t=>t.title.toLowerCase().includes(searchQuery));
   }
-  // Build todo map by date
-  const todoMap={};
-  ft.forEach(t=>{if(!t.due_date)return;if(!todoMap[t.due_date])todoMap[t.due_date]=[];todoMap[t.due_date].push(t);});
-  // Preprocess event date ranges
-  const evtRanges=evts.map(e=>({e,startD:e.start_datetime.split('T')[0],endD:e.end_datetime?e.end_datetime.split('T')[0]:e.start_datetime.split('T')[0]}));
+  // Unified items: events + todos both participate in lane assignment
+  const allItems=[
+    ...evts.map(e=>({kind:'event',e,startD:e.start_datetime.split('T')[0],endD:e.end_datetime?e.end_datetime.split('T')[0]:e.start_datetime.split('T')[0]})),
+    ...ft.filter(t=>t.due_date).map(t=>({kind:'todo',e:t,startD:t.due_date,endD:t.due_date}))
+  ];
   const EH=20,DNH=26,GAP=2;
   let weeksHtml='';
   for(let w=0;w<6;w++){
     const wDays=allDays.slice(w*7,(w+1)*7);
     const ws=toDateStr(wDays[0]),we=toDateStr(wDays[6]);
-    // Events overlapping this week
-    const weekEvts=evtRanges.filter(({startD,endD})=>startD<=we&&endD>=ws);
-    // Sort by duration descending so longer events get lower lanes
-    weekEvts.sort((a,b)=>(new Date(b.endD)-new Date(b.startD))-(new Date(a.endD)-new Date(a.startD)));
-    // Lane assignment
+    const weekItems=allItems.filter(({startD,endD})=>startD<=we&&endD>=ws);
+    // Longer items first → lower lanes; events before todos of same length
+    weekItems.sort((a,b)=>{
+      const da=new Date(a.endD)-new Date(a.startD),db=new Date(b.endD)-new Date(b.startD);
+      if(db!==da)return db-da;
+      return a.kind==='event'?-1:1;
+    });
     const lanes=[];
-    const assignments=weekEvts.map(({e,startD,endD})=>{
-      const origStart=startD>=ws;
-      const origEnd=endD<=we;
+    const assignments=weekItems.map(({kind,e,startD,endD})=>{
+      const origStart=startD>=ws,origEnd=endD<=we;
       const sc=origStart?wDays.findIndex(d=>toDateStr(d)===startD):0;
       const ec=origEnd?wDays.findIndex(d=>toDateStr(d)===endD):6;
-      const safeS=sc<0?0:sc, safeE=ec<0?6:ec;
+      const safeS=sc<0?0:sc,safeE=ec<0?6:ec;
       let lane=0;
       while(lanes[lane]!==undefined&&lanes[lane]>=safeS)lane++;
       lanes[lane]=safeE;
-      return {e,safeS,safeE,origStart,origEnd,lane};
+      return {kind,e,safeS,safeE,origStart,origEnd,lane};
     });
-    const maxLanes=lanes.length||0;
-    const rowH=Math.max(72,DNH+maxLanes*EH+GAP*2);
+    const rowH=Math.max(72,DNH+(lanes.length||0)*EH+GAP*2);
     // Day cells
     let daysHtml='';
     for(let i=0;i<7;i++){
       const d=wDays[i],ds=toDateStr(d);
       const isOther=d.getMonth()!==calMonth;
-      const hasTodo=!!(todoMap[ds]&&todoMap[ds].length);
-      daysHtml+=`<div class="cal-day${isOther?' other-month':''}${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" style="min-height:${rowH}px" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${d.getDate()}</span>${hasTodo?'<span class="cal-todo-dot"></span>':''}</div>`;
+      daysHtml+=`<div class="cal-day${isOther?' other-month':''}${ds===todayStr?' today':''}${ds===selectedDay?' selected':''}" style="min-height:${rowH}px" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${d.getDate()}</span></div>`;
     }
-    // Event bars
+    // Bars for events and todos
     let barsHtml='';
-    assignments.forEach(({e,safeS,safeE,origStart,origEnd,lane})=>{
+    assignments.forEach(({kind,e,safeS,safeE,origStart,origEnd,lane})=>{
       const span=safeE-safeS+1;
       const top=DNH+lane*EH+GAP;
-      const ml=origStart?GAP:0, mr=origEnd?GAP:0;
+      const ml=origStart?GAP:0,mr=origEnd?GAP:0;
       const br=`${origStart?'4px':'0'} ${origEnd?'4px':'0'} ${origEnd?'4px':'0'} ${origStart?'4px':'0'}`;
-      barsHtml+=`<div class="cal-evt-bar" style="top:${top}px;left:calc(${(safeS/7)*100}% + ${ml}px);width:calc(${(span/7)*100}% - ${ml+mr}px);background:${e.color};border-radius:${br}" title="${esc(e.title)}" onclick="event.stopPropagation();selectCalDay('${e.start_datetime.split('T')[0]}')">${esc(e.title)}</div>`;
+      const color=kind==='event'?e.color:'#94a3b8';
+      const label=kind==='todo'?`☑ ${esc(e.title)}`:esc(e.title);
+      const clickDs=kind==='event'?e.start_datetime.split('T')[0]:e.due_date;
+      const opacity=kind==='todo'&&e.done?'opacity:.55;':'';
+      barsHtml+=`<div class="cal-evt-bar" style="${opacity}top:${top}px;left:calc(${(safeS/7)*100}% + ${ml}px);width:calc(${(span/7)*100}% - ${ml+mr}px);background:${color};border-radius:${br}" title="${esc(e.title)}" onclick="event.stopPropagation();selectCalDay('${clickDs}')">${label}</div>`;
     });
     weeksHtml+=`<div class="cal-week">${daysHtml}<div class="cal-events-overlay" style="height:${rowH}px">${barsHtml}</div></div>`;
   }
